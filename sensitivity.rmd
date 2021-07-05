@@ -1,0 +1,274 @@
+---
+title: "Sensitivity Analyses"
+author: "Daniel Thurber"
+date: "7/2/2021"
+output: pdf_document
+---
+
+
+
+
+This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals and create the qdf, tdf, and cdf objects.
+```{r}
+library(naniar)
+library(ggplot2)
+mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 
+               'RHF_CONF_A', 'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 
+               'Right Hand Fork', 'Ricks Spring')
+i <-5
+
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+maxT <- 100 #initially set these values high
+maxC <- 1000 #they can be honed in later in the script
+
+qfile <- paste0(site,'_Q.csv')
+qdf <- read.csv(paste0(mypath,qfile), stringsAsFactors = F)
+tfile <-  paste0(site,'_T.csv')
+tdf <- read.csv(paste0(mypath,tfile), stringsAsFactors = F)
+cfile <-  paste0(site,'_SC.csv')
+cdf <- read.csv(paste0(mypath,cfile), stringsAsFactors = F)
+
+minQ <- 0.00                     #below these thresholds, values will be replaced with NA
+minT <- 0
+minC <- 0
+maxQ <- 100
+maxT <- 200
+maxC <- 8000
+
+qdf$date <- as.Date(qdf$DateTime, '%m / %d / %Y %H:%M')
+qdf$discharge <- (as.numeric(qdf$Value))
+qdf$discharge <- replace(qdf$discharge, qdf$discharge<minQ |qdf$discharge>maxQ, NA)
+
+
+cdf$date <- as.Date(cdf$DateTime, '%m / %d / %Y %H:%M')
+cdf$conductance <- (as.numeric(cdf$Value))
+cdf$conductance <- replace(cdf$conductance, cdf$conductance<minC |cdf$conductance>maxC, NA)
+
+
+tdf$date <- as.Date(tdf$DateTime, '%m / %d / %Y %H:%M')
+tdf$temperature <- (as.numeric(tdf$Value))
+tdf$temperature <- replace(tdf$temperature, tdf$temperature<minT | tdf$temperature>maxT, NA)
+
+
+```
+
+
+This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes and create the qtc object.
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A', 
+               'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
+               'Ricks Spring')
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+
+qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
+
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+qtc$day <- format(as.Date(qtc$date),'%m-%d')
+qtc$wyday <- 0
+head(qtc,3)
+```
+
+
+The following chunks explore the impact of anomalies within the original data on the ACF of 15-minute data
+----
+
+```{r}
+a <- 50000  #index of starting time
+c <- 30000  #window width (number of 15-min intervals)
+b <- a+c    #calculates final index
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangle
+plot(qdf$discharge[a:b], type = 'n', ylab = 'discharge', 
+     main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
+     )
+
+#highlight the region we will zoom in on later
+rect(xleft=12000, ybottom = 0, ytop=2, xright=13000, col = 'cadetblue2')
+lines(qdf$discharge[a:b], type = 'l')
+axis(1, at = seq(0,c, length.out = 6), labels = (qdf$date[seq(a,b,length.out = 6)]))
+
+```
+
+Plot the region highlighted above.
+```{r}
+plot(qdf$discharge[62000:63000], type = 'l', ylab = 'discharge')
+adjdf <- qdf[62000:63000,]
+nadf <- qdf[62000:63000,]
+randdf <- qdf[62000:63000,]
+plot(adjdf$discharge[480:530], type= 'l', ylab = 'discharge', 
+     xaxt = 'n', xlab = '',main = 'QAQC Data')
+axis(1, at = seq(0,50, length.out = 6), labels = (adjdf$DateTime[seq(480,530, length.out = 6)]))
+
+```
+
+Identify the region that needs to be patched.  Create three different types of patches and plot them
+```{r}
+adjdf$discharge[504:508] <- .33
+plot(adjdf$discharge[490:510], type= 'l', ylab = 'discharge', main = 'constant replacement')
+nadf$discharge[504:508] <- NA
+plot(nadf$discharge[490:510], type= 'l', ylab = 'discharge', main = 'NA replacement')
+randdf$discharge[504:508] <-  runif(5,.3138, .3863)
+plot(randdf$discharge[490:510], type= 'l', ylab = 'discharge', main = 'random replacement')
+
+```
+
+Calculates ACF values of the original and all adjusted dataframes of the established window
+```{r}
+regacf <- acf(qdf$discharge[62000:63000], lag.max = 300, type = "correlation", plot = F, na.action = na.pass)
+adjacf <- acf(adjdf$discharge, lag.max = 300, type = "correlation", plot = F, na.action = na.pass)
+naacf <- acf(nadf$discharge, lag.max = 300, type = "correlation", plot = F, na.action = na.pass)
+randacf <- acf(randdf$discharge, lag.max = 300, type = "correlation", plot = F, na.action = na.pass)
+
+```
+
+Plot all ACF functions together: QC 15-min data and patched versions
+```{r}
+plot(regacf$lag, regacf$acf, type = 'l', col='blue',
+     ylab = 'Correlation', xlab = 'Lag (15-min steps)', ylim = c(0,1), 
+     main = paste('Autocorrelation sensitivity: Right Hand Fork'))
+lines(naacf$acf, col = 'brown4')
+lines(adjacf$acf, col = 'green')
+lines(randacf$acf, col = 'purple')
+abline(h = 0.2, lty = 3)
+legend(155,1, legend = c('QC data', 'constant replacement', 'NA replacement', 'random replacement'), 
+       lty = 1, col = c('blue', 'green', 'brown4', 'purple'))
+```
+
+
+
+----
+
+
+Below, we look at aggregated daily average values of discharge, conductance, and temperature
+----
+Find holes in the time series
+```{r}
+qholes <- which(is.na(qtc$discharge))
+qholes
+```
+
+plot the discharge series and highlight all missing values.  Using the plot, iteratively focus on a study interval.
+```{r}
+study.int <- c(1098,1350) #select the study interval here
+plot(qtc$discharge, type = 'l')
+abline(v = qholes, col = 'red')
+plot(qtc$discharge, type = 'l', xlim = study.int, ylim=c(0,10))
+abline(v = qholes, col = 'red')
+abline(v = study.int[1], lty = 4)
+```
+create a linear patch.  If there are no holes in the data, set patch start and patchend to the same value.  That will help ensure that later code chunks run properly.
+```{r}
+patchstart <- 756
+patchend <- 763
+patchlength <- patchend - patchstart +1
+linpatch <- seq(qtc$discharge[patchstart],qtc$discharge[patchend], length.out= patchlength)
+
+```
+
+generate a new dataframe and patch missing data with linear interpolation
+```{r}
+lin.df <- qtc
+lin.df$discharge[patchstart:patchend] <- linpatch
+plot(lin.df$discharge, type = 'l', xlim = c(730,780), ylim=c(0,5), 
+     ylab = 'discharge', main = sitename, col = 'red')
+lines(qtc$discharge)
+```
+
+```{r}
+a <- 1098  #index of starting time
+c <- 130  #window width (number of days)
+b <- a+c    #calculates final index
+b <- 1350
+win1 <- c(a,1150)
+win2 <- c(a,1250)
+win3 <- c(a,b)
+win4 <- c(1120,b)
+win5 <- c(1140,b)
+yrange <- c(0,max(qtc$discharge[a:b], na.rm = T))
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangle
+plot(qtc$discharge, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
+     main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
+     )
+
+#highlight ranges for each window of ACF analysis
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
+rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
+rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
+rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
+rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
+
+#draw and annotate a box around any patches that exist.  Adjust numbers to position vertically
+rect(patchstart, 0.5, patchend, 1.5)  #draw a box around patched section of line
+text(mean(patchstart,patchend), 0.3, 'Patched values')  #annotate patch box
+
+lines(lin.df$discharge, type = 'l', col = 'red')
+lines(qtc$discharge, type = 'l')
+axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6)]))
+
+```
+
+Compute ACF within each window. X.1 versions calculate off of patched data
+```{r}
+acf1 <- acf(qtc$discharge[win1[1]:win1[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf2 <- acf(qtc$discharge[win2[1]:win2[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf3 <- acf(qtc$discharge[win3[1]:win3[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf4 <- acf(qtc$discharge[win4[1]:win4[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf5 <- acf(qtc$discharge[win5[1]:win5[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf3.1 <- acf(lin.df$discharge[win3[1]:win3[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf4.1 <- acf(lin.df$discharge[win4[1]:win4[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+acf5.1 <- acf(lin.df$discharge[win5[1]:win5[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+```
+
+```{r}
+plot(acf1$lag, acf1$acf, type = 'l', col=linecols[1],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,30), 
+     main = paste('Autocorrelation window sensitivity:', sitename))
+lines(acf2$acf, col = linecols[2])
+lines(acf3$acf, col = linecols[3])
+lines(acf4$acf, col = linecols[4])
+lines(acf5$acf, col = linecols[5])
+
+abline(h = 0.2, lty = 3)
+
+```
+
+```{r}
+plot(acf3$lag, acf3$acf, type = 'l', col=linecols[3],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,30),
+     main = paste('Autocorrelation patch sensitivity:', sitename))
+lines(acf3.1$acf, col = linecols[3], lty = 2)
+
+lines(acf4$acf, col = linecols[4])
+lines(acf4.1$acf, col = linecols[4], lty = 2)
+
+lines(acf5$acf, col = linecols[5])
+lines(acf5.1$acf, col = linecols[5], lty = 2)
+
+abline(h = 0.2, lty = 3)
+
+legend('topright', legend = c('QC data', 'patched data'), lty = c(1,2))
+```
+----
+

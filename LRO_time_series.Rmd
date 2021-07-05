@@ -1,0 +1,177 @@
+---
+title: "LRO Time Series"
+author: "Daniel Thurber"
+date: "1/18/2021"
+output: pdf_document
+---
+
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A', 
+               'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
+               'Ricks Spring')
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+```
+
+Read the given csv into a dataframe.
+```{r}
+qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
+```
+
+
+format date as a date and generate day column without year, then check the data formats. 
+```{r}
+
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+qtc$day <- format(as.Date(qtc$date),'%m-%d')
+qtc$wyday <- 0
+head(qtc,3)
+```
+
+create a reference dataframe relating water year days to month-day format
+```{r}
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+```
+
+
+Populate water year day column with appropriate values 1-366
+```{r}
+for (i in 1:nrow(qtc)){
+  qtc$wyday[i] <- wydates$wyday[which(wydates$day==qtc$day[i])]
+}
+```
+
+Set viewing parameters and generate a discharge plot
+
+```{r}
+xrange <- c(1,366)   #range of water year days to consider
+dayticks <- 11 #number of tick marks on x axis
+yrange <- c(min(qtc$discharge, na.rm = T), max(qtc$discharge, na.rm = T))
+#yrange <- c(0,10)  #un-comment to set custom y-axis
+pltyears <- seq(min(qtc$WY),max(qtc$WY))
+#pltyears <- c(2015,2017,2019)  #un-comment to select custom year range
+
+wylabels <- wydates$day[seq(xrange[1],xrange[2],length.out = dayticks)]
+plot(qtc$wyday[which(qtc$WY==pltyears[1])],qtc$discharge[which(qtc$WY==pltyears[1])], type = 'l', 
+     xlim = xrange, ylim = yrange, xaxt = 'n',
+     xlab = 'Day of Year', ylab = 'Discharge (cms)', col = linecols[1],
+     main = paste('Discharge of ', sitename, ' by water year'))
+axis(1, at = seq(xrange[1],xrange[2],length.out = dayticks), labels = wylabels)
+for (i in 2:length(pltyears)){
+  lines(qtc$wyday[which(qtc$WY==pltyears[i])],qtc$discharge[which(qtc$WY==pltyears[i])],col = linecols[i])
+}
+legend('topleft', legend = pltyears, lty = 1, col = linecols)
+```
+
+Set viewing parameters and generate a temperature plot
+
+```{r}
+xrange <- c(1,366)   #range of water year days to consider, 1 to 366
+dayticks <- 8 #number of tick marks on x axis
+yrange <- c(min(qtc$temperature, na.rm = T), max(qtc$temperature, na.rm = T))
+#yrange <- c(0,10)  #un-comment to set custom y-axis
+pltyears <- seq(min(qtc$WY),max(qtc$WY))
+#pltyears <- c(2015,2019)  #un-comment to select custom year range
+
+wylabels <- wydates$day[seq(xrange[1],xrange[2],length.out = dayticks)]
+plot(qtc$wyday[which(qtc$WY==pltyears[1])],qtc$temperature[which(qtc$WY==pltyears[1])], type = 'l', 
+     xlim = xrange, ylim = yrange, xaxt = 'n',
+     xlab = 'Day of Year', ylab = 'Temperature (deg C)', col = linecols[1],
+     main = paste('Temperature of ', sitename, ' by water year'))
+axis(1, at = seq(xrange[1],xrange[2],length.out = dayticks), labels = wylabels)
+for (i in 2:length(pltyears)){
+  lines(qtc$wyday[which(qtc$WY==pltyears[i])],qtc$temperature[which(qtc$WY==pltyears[i])],col = linecols[i])
+}
+legend('topleft', legend = pltyears, lty = 1, col = linecols)
+```
+
+
+Set viewing parameters and generate a specific conductance plot
+
+```{r}
+xrange <- c(1,366)   #range of water year days to consider
+dayticks <- 11 #number of tick marks on x axis
+yrange <- c(min(qtc$conductance, na.rm = T), max(qtc$conductance, na.rm = T))
+#yrange <- c(0,10)  #un-comment to set custom y-axis
+pltyears <- seq(min(qtc$WY),max(qtc$WY))
+#pltyears <- c(2015,2018)  #un-comment to select custom year range
+
+wylabels <- wydates$day[seq(xrange[1],xrange[2],length.out = dayticks)]
+plot(qtc$wyday[which(qtc$WY==pltyears[1])],qtc$conductance[which(qtc$WY==pltyears[1])], type = 'l', 
+     xlim = xrange, ylim = yrange, xaxt = 'n',
+     xlab = 'Day of Year', ylab = 'conductance (uS/cm)', col = linecols[1],
+     main = paste('Specific conductance of ', sitename, ' by water year'))
+axis(1, at = seq(xrange[1],xrange[2],length.out = dayticks), labels = wylabels)
+for (i in 2:length(pltyears)){
+  lines(qtc$wyday[which(qtc$WY==pltyears[i])],qtc$conductance[which(qtc$WY==pltyears[i])],col = linecols[i])
+}
+legend('bottomleft', legend = pltyears, lty = 1, col = linecols)
+```
+
+Define a water year and plot temp and conductivity together
+```{r}
+pltyear <- 2019
+xrange <- c(150,300)   #range of water year days to consider
+dayticks <- 11 #number of tick marks on x axis
+yrange <- c(min(qtc$conductance, na.rm = T), max(qtc$conductance, na.rm = T))
+yrange <- c(250,420)  #un-comment to set custom y-axis
+
+wylabels <- wydates$day[seq(xrange[1],xrange[2],length.out = dayticks)]
+plot(qtc$wyday[which(qtc$WY==pltyear)],qtc$conductance[which(qtc$WY==pltyear)], type = 'l', 
+     xlim = xrange, ylim = yrange, xaxt = 'n',
+     xlab = 'Day of Year', ylab = 'conductance (uS/cm)', col = linecols[1],
+     main = paste('SC and Temp of ', sitename, 'for water year', pltyear))
+axis(1, at = seq(xrange[1],xrange[2],length.out = dayticks), labels = wylabels)
+
+legend('bottomleft', legend = c('conductance', 'temp'
+), lty = 1, col = linecols)
+
+par(new = T)
+plot(qtc$temperature[which(qtc$WY==pltyear)], 
+     xlab = '', ylab = '',
+     col=linecols[2], type = 'l', axes= F)
+axis(side = 4, at = pretty(range(qtc$temperature)))      # Add second axis
+mtext("water temp (C)", side = 4, line = 3)
+```
+
+
+
+Define a water year and plot discharge and conductivity together
+```{r}
+wy <- 2020
+wydf <- qtc[which(qtc$WY == wy),]
+xrange <- c(1,365)   #range of water year days to consider
+dayticks <- 11 #number of tick marks on x axis
+yrange <- c(min(wydf$conductance, na.rm = T), max(wydf$conductance, na.rm = T))
+#yrange <- c(250,420)  #un-comment to set custom y-axis
+mean(qtc$discharge[which(qtc$WY == wy)], na.rm = T)
+```
+
+```{r}
+wylabels <- wydates$day[seq(xrange[1],xrange[2],length.out = dayticks)]
+par(mar = c(4,4,2,4.5))
+plot(wydf$wyday,wydf$conductance, type = 'l', 
+     xlim = xrange, ylim = yrange, xaxt = 'n',
+     xlab = 'Day of Year', ylab = 'conductance (uS/cm)', col = linecols[1],
+     main = paste('SC and Discharge of ', sitename, 'for water year', wy))
+axis(1, at = seq(xrange[1],xrange[2],length.out = dayticks), labels = wylabels)
+
+legend('left', legend = c('conductance', 'discharge'
+), lty = 1, col = linecols)
+
+par(new = T)
+plot(wydf$discharge[xrange[1]:xrange[2]], 
+     xlab = '', ylab = '',
+     col=linecols[2], type = 'l', axes= F)
+axis(side = 4, pretty(range(wydf$discharge, na.rm = T),5))      # Add second axis
+mtext("discharge", side = 4, line = 3)
+```

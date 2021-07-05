@@ -1,0 +1,121 @@
+---
+title: "R Playground"
+author: "Daniel Thurber"
+date: "2/22/2021"
+output: pdf_document
+---
+
+Input the name of the file within the designated folder and initialize minimum value thresholds.
+```{r}
+library(naniar)
+library(ggplot2)
+mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/'
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A', 
+               'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
+               'Ricks Spring')
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+minQ <- 0
+minT <- 0
+minC <- 0
+```
+
+Open all files and save as dataframes.
+```{r}
+
+qfile <- paste0(site,'_Q.csv')
+qdf <- read.csv(paste0(mypath,qfile), stringsAsFactors = F)
+tfile <-  paste0(site,'_T.csv')
+tdf <- read.csv(paste0(mypath,tfile), stringsAsFactors = F)
+cfile <-  paste0(site,'_SC.csv')
+cdf <- read.csv(paste0(mypath,cfile), stringsAsFactors = F)
+```
+
+then check the data format. 
+```{r}
+head(qdf,3)
+```
+
+Find the first date where data was collected.
+```{r}
+qstart <- as.Date(qdf$DateTime[1], '%m / %d / %Y %H:%M')
+qstart
+cstart <- as.Date(cdf$DateTime[1], '%m / %d / %Y %H:%M')
+cstart
+tstart <- as.Date(tdf$DateTime[1], '%m / %d / %Y %H:%M')
+tstart
+mindate <- min(qstart,cstart,tstart)
+mindate
+```
+
+
+Add column for date and discharge, replace all low values with NA
+```{r}
+qdf$date <- as.Date(qdf$DateTime, '%m / %d / %Y %H:%M')
+qdf$discharge <- (as.numeric(qdf$Value))
+qdf$discharge <- replace(qdf$discharge, qdf$discharge<minQ, NA)
+
+cdf$date <- as.Date(cdf$DateTime, '%m / %d / %Y %H:%M')
+cdf$conductance <- (as.numeric(cdf$Value))
+cdf$conductance <- replace(cdf$conductance, cdf$conductance<minC, NA)
+
+tdf$date <- as.Date(tdf$DateTime, '%m / %d / %Y %H:%M')
+tdf$temperature <- (as.numeric(tdf$Value))
+tdf$temperature <- replace(tdf$temperature, tdf$temperature<minQ, NA)
+
+#qdf$WY = ifelse(qdf$month>=10, qdf$Year+1, qdf$Year) #determine water year
+```
+
+```{r}
+#cdf <- cdf[,c(-2,-3,-5,-6)] #use this line to remove columns
+head(cdf,3)
+low.lim <- quantile(cdf$conductance, 0.001, na.rm = T)
+high.lim <- quantile(cdf$conductance, 0.999, na.rm = T)
+paste("low limit:", low.lim, ", high limit:", high.lim)
+hist(cdf$conductance[!is.na(cdf$conductance)], breaks = 400, main = "frequency distribution", xlab = "conductance")
+```
+
+generate histogram of value frequencies
+```{r}
+condvals <- cdf$conductance[!is.na(cdf$conductance)]
+scfreq <- hist(condvals, breaks = 500)
+condvals1 <- condvals[which( condvals>200 & condvals<500)]
+#condvals1 <- condvals[which( condvals>low.lim & condvals<high.lim)]
+scfreq1 <- hist(condvals1, breaks = 400)
+```
+```{r}
+
+plot(scfreq1$counts~scfreq1$mids, type = 'l', xlab = "conductance", ylab = 'frequency', main = sitename)
+```
+
+
+
+
+
+```{r}
+#qdf <- qdf[,c(-2,-3,-5,-6)] #use this line to remove columns
+head(qdf,3)
+low.lim <- quantile(qdf$discharge, 0.001, na.rm = T)
+high.lim <- quantile(qdf$discharge, 0.95, na.rm = T)
+paste("low limit:", low.lim, ", high limit:", high.lim)
+hist(qdf$discharge[!is.na(qdf$discharge)], breaks = 400, main = "frequency distribution", xlab = "discharge")
+```
+
+generate histogram of value frequencies
+```{r}
+discvals <- qdf$discharge[!is.na(qdf$discharge)]
+qfreq <- hist(discvals, breaks = 500)
+discvals1 <- discvals[which( discvals>.2 & discvals<6)]
+#condvals1 <- condvals[which( condvals>low.lim & condvals<high.lim)]
+qfreq1 <- hist(discvals1, breaks = 120)
+```
+```{r}
+
+plot(qfreq1$counts~qfreq1$mids, type = 'l', xlab = "discharge (cms)", ylab = 'frequency', main = sitename)
+```
+
+
+

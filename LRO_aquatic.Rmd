@@ -1,0 +1,183 @@
+---
+title: "LRO Aggregate"
+author: "Daniel Thurber"
+date: "2/22/2021"
+output: pdf_document
+---
+
+Input the name of the file within the designated folder and read the csv into a dataframe.
+```{r}
+library(naniar)
+library(ggplot2)
+mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 
+               'RHF_CONF_A', 'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 
+               'Right Hand Fork', 'Ricks Spring')
+i <-5
+
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+maxT <- 100 #initially set these values high
+maxC <- 1000 #they can be honed in later in the script
+```
+
+Open all files and save as dataframes.
+```{r}
+
+qfile <- paste0(site,'_Q.csv')
+qdf <- read.csv(paste0(mypath,qfile), stringsAsFactors = F)
+tfile <-  paste0(site,'_T.csv')
+tdf <- read.csv(paste0(mypath,tfile), stringsAsFactors = F)
+cfile <-  paste0(site,'_SC.csv')
+cdf <- read.csv(paste0(mypath,cfile), stringsAsFactors = F)
+```
+
+
+Find the first date where data was collected.
+```{r}
+qstart <- as.Date(qdf$DateTime[1], '%m / %d / %Y %H:%M')
+qstart
+cstart <- as.Date(cdf$DateTime[1], '%m / %d / %Y %H:%M')
+cstart
+tstart <- as.Date(tdf$DateTime[1], '%m / %d / %Y %H:%M')
+tstart
+mindate <- min(qstart,cstart,tstart)
+paste('Start of record:', mindate)
+
+qend <- as.Date(qdf$DateTime[nrow(qdf)], '%m / %d / %Y %H:%M')
+cend <- as.Date(cdf$DateTime[nrow(cdf)], '%m / %d / %Y %H:%M')
+tend <- as.Date(tdf$DateTime[nrow(tdf)], '%m / %d / %Y %H:%M')
+maxdate <- max(qend,cend, tend)
+maxdate <- as.Date(maxdate, '%m / %d / %Y')
+paste('End of record:', maxdate)
+```
+
+
+Add column for date and discharge/conductance/temperature, replace all low values with NA
+```{r}
+minQ <- 0.00                     #below these thresholds, values will be replaced with NA
+minT <- 0
+minC <- 0
+#maxQ <- 
+maxT <- 200
+maxC <- 8000
+
+qdf$date <- as.Date(qdf$DateTime, '%m / %d / %Y %H:%M')
+qdf$discharge <- (as.numeric(qdf$Value))
+qdf$discharge <- replace(qdf$discharge, qdf$discharge<minQ, NA)
+
+
+cdf$date <- as.Date(cdf$DateTime, '%m / %d / %Y %H:%M')
+cdf$conductance <- (as.numeric(cdf$Value))
+cdf$conductance <- replace(cdf$conductance, cdf$conductance<minC |cdf$conductance>maxC, NA)
+
+
+tdf$date <- as.Date(tdf$DateTime, '%m / %d / %Y %H:%M')
+tdf$temperature <- (as.numeric(tdf$Value))
+tdf$temperature <- replace(tdf$temperature, tdf$temperature<minT | tdf$temperature>maxT, NA)
+
+
+#qdf$WY = ifelse(qdf$month>=10, qdf$Year+1, qdf$Year) #determine water year
+```
+
+Plot each time series to see if any extreme values need to be addressed.  Set min/max
+```{r}
+plot(qdf$discharge, type = "l", xlab = 'Date', ylab = 'Discharge')
+plot(cdf$conductance~cdf$date, type = "l", xlab = "Date", ylab = "Specific Conductance")
+plot(tdf$temperature~tdf$date, type = "l", xlab = 'Date', ylab = 'Temperature')
+```
+zoom in on a specific time window
+```{r}
+a <- 62400     #window starting index from plot above
+c <- 500  #window length (15-min intervals)
+b <- a+c
+plot(qdf$discharge[a:b], type = "l", xlab = 'Date', 
+     ylab = 'Discharge', xaxt='n', main = paste('Discharge at', site))
+axis(1, at = seq(0,c, length.out = 6), labels = (qdf$date[seq(a,b,length.out = 6)]))
+```
+
+
+Calculate daily mean for each variable.  NA values are ignored.
+```{r}
+dailyq <- aggregate(discharge~date, qdf, FUN = "mean", na.rm = T)
+
+dailyt <- aggregate(temperature~date, tdf, FUN = "mean", na.rm = T)
+
+dailyc <- aggregate(conductance~date, cdf, FUN = "mean", na.rm = T)
+
+```
+
+
+Plot all three variables again
+```{r}
+plot(dailyq$discharge~dailyq$date, type = "l", xlab = 'Date', ylab = 'Discharge')
+plot(dailyc$conductance~dailyc$date, type = "l", xlab = "Date", ylab = "Specific Conductance")
+plot(dailyt$temperature~dailyt$date, type = "l", xlab = 'Date', ylab = 'Temperature')
+```
+
+merge dataframes for all overlapping values
+
+
+
+create one dataframe with all three variables.  Plot the discharge time series, which should look identical to that plotted above, except with gaps for periods of missing data.
+```{r}
+qtcdf <- data.frame(date = seq(mindate, maxdate, by = 'day'))
+#a row is created for each day in the period of record
+qtcdf <-  merge(qtcdf, dailyq, by = 'date', all = T)
+qtcdf <-  merge(qtcdf, dailyc, by = 'date', all = T)
+qtcdf <-  merge(qtcdf, dailyt, by = 'date', all = T)
+plot(qtcdf$discharge~qtcdf$date, type = "l", xlab = 'Date', ylab = 'Discharge', main = sitename)
+plot(qtcdf$conductance~qtcdf$date, type = "l", xlab = 'Date', ylab = 'Conductance', main = sitename)
+plot(qtcdf$temperature~qtcdf$date, type = "l", xlab = 'Date', ylab = 'Temperature', main = sitename)
+
+```
+
+
+```{r}
+nrow(qtcdf)
+nrow(dailyq)
+nrow(dailyt)
+nrow(dailyc)
+qtcdf[which(is.na(qtcdf$conductance)),]
+tail(qtcdf)
+```
+
+
+
+Add a water year column to the dataframe
+```{r}
+qtcdf$WY = ifelse(as.numeric(format(qtcdf$date,'%m'))>=10, 
+                     as.numeric(format(qtcdf$date,'%Y'))+1, 
+                     as.numeric(format(qtcdf$date,'%Y'))) #determine water year
+```
+
+Plot all time series and look for any issues worth addressing
+```{r}
+day1 <- 1
+#day1 <- 600 #use these values to zoom in on a specific date range
+dayend <- nrow(qtcdf)
+#dayend <- 680  #comment them out to return to full period of record
+plot(qtcdf$date[day1:dayend],qtcdf$discharge[day1:dayend], type = 'l', col = 'cadetblue4',
+     xlab = "date", ylab = "discharge (CMS)", main = paste("discharge at ", sitename))
+
+plot(qtcdf$date[day1:dayend],qtcdf$temperature[day1:dayend], type = 'l', col = 'cadetblue4',
+     xlab = "date", ylab = "temperature (C)", main = paste("temperature at ", sitename))
+
+plot(qtcdf$date[day1:dayend],qtcdf$conductance[day1:dayend], type = 'l', col = 'cadetblue4',
+     xlab = "date", ylab = "conductance ", main = paste("conductance at ", sitename))
+day1 <- 1
+dayend <- nrow(qtcdf)
+```
+
+
+
+```{r}
+write.csv(qtcdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
+```
+
+
+
+
+

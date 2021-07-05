@@ -1,0 +1,135 @@
+---
+title: "LRO Aggregate"
+author: "Daniel Thurber"
+date: "2/22/2021"
+output: pdf_document
+---
+
+Input the name of the file within the designated folder and read the csv into a dataframe.
+```{r}
+library(naniar)
+library(ggplot2)
+mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
+#LR_FB_BA, BC_CONF_A, LR_TG_BA, TF_CONF_A, RHF_CONF_A
+site <- 'RS_CONF_A'               #enter site code for file upload and export
+sitename <- 'Ricks Spring'        #enter site name for plotting
+minQ <- 0.01                    #below these thresholds, values will be replaced with NA
+minT <- .001
+minC <- .001
+```
+
+Open all files and save as dataframes.
+```{r}
+
+qfile <- paste0(site,'_Q.csv')
+qdf <- read.csv(paste0(mypath,qfile), stringsAsFactors = F)
+tfile <-  paste0(site,'_T.csv')
+tdf <- read.csv(paste0(mypath,tfile), stringsAsFactors = F)
+cfile <-  paste0(site,'_SC.csv')
+cdf <- read.csv(paste0(mypath,cfile), stringsAsFactors = F)
+```
+
+then check the data format. 
+```{r}
+head(qdf,3)
+```
+
+
+
+
+Find the first date where data was collected.
+```{r}
+qstart <- as.Date(qdf$DateTime[1], '%m / %d / %Y %H:%M')
+qstart
+cstart <- as.Date(cdf$DateTime[1], '%m / %d / %Y %H:%M')
+cstart
+tstart <- as.Date(tdf$DateTime[1], '%m / %d / %Y %H:%M')
+tstart
+mindate <- min(qstart,cstart,tstart)
+mindate
+```
+
+
+Add column for date and discharge/conductance/temperature, replace all low values with NA
+```{r}
+minQ <- 0.100                     #below these thresholds, values will be replaced with NA
+minT <- .001
+minC <- .001
+qdf$date <- as.Date(qdf$DateTime, '%m / %d / %Y %H:%M')
+qdf$discharge <- (as.numeric(qdf$Value))
+qdf$discharge <- replace(qdf$discharge, qdf$discharge<minQ, NA)
+
+
+cdf$date <- as.Date(cdf$DateTime, '%m / %d / %Y %H:%M')
+cdf$conductance <- (as.numeric(cdf$Value))
+cdf$conductance <- replace(cdf$conductance, cdf$conductance<minC, NA)
+
+
+tdf$date <- as.Date(tdf$DateTime, '%m / %d / %Y %H:%M')
+tdf$temperature <- (as.numeric(tdf$Value))
+tdf$temperature <- replace(tdf$temperature, tdf$temperature<minT, NA)
+
+
+#qdf$WY = ifelse(qdf$month>=10, qdf$Year+1, qdf$Year) #determine water year
+```
+
+Plot each time series to see if any extreme values need to be addressed
+```{r}
+plot(qdf$discharge, type = "l", ylim = c(0,10))
+plot(cdf$conductance~cdf$date, type = "l", xlab = "Date", ylab = "Specific Conductance")
+plot(tdf$temperature, type = "l", ylim = c(0,10))
+```
+
+
+Calculate daily mean for each variable
+```{r}
+dailyq <- aggregate(discharge~date, qdf, FUN = "mean")
+
+dailyt <- aggregate(temperature~date, tdf, FUN = "mean")
+
+dailyc <- aggregate(conductance~date, cdf, FUN = "mean")
+
+```
+
+
+merge dataframes for all overlapping values
+```{r}
+QTCdf <- merge(dailyc, dailyq, by = 'date')
+QTCdf <- merge(QTCdf, dailyt, by = 'date')
+```
+
+Add a water year column to the dataframe
+```{r}
+QTCdf$WY = ifelse(as.numeric(format(QTCdf$date,'%m'))>=10, 
+                     as.numeric(format(QTCdf$date,'%Y'))+1, 
+                     as.numeric(format(QTCdf$date,'%Y'))) #determine water year
+```
+
+Plot all time series and look for any issues worth addressing
+```{r}
+day1 <- 1
+#day1 <- 600 #use these values to zoom in on a specific date range
+dayend <- nrow(QTCdf)
+#dayend <- 680  #comment them out to return to full period of record
+plot(QTCdf$date[day1:dayend],QTCdf$discharge[day1:dayend], type = 'l', col = 'cadetblue4',
+     xlab = "date", ylab = "discharge (CMS)", main = paste("discharge at ", sitename))
+
+plot(QTCdf$date[day1:dayend],QTCdf$temperature[day1:dayend], type = 'l', col = 'cadetblue4',
+     xlab = "date", ylab = "temperature (C)", main = paste("temperature at ", sitename))
+
+plot(QTCdf$date[day1:dayend],QTCdf$conductance[day1:dayend], type = 'l', col = 'cadetblue4',
+     xlab = "date", ylab = "conductance ", main = paste("conductance at ", sitename))
+day1 <- 1
+dayend <- nrow(QTCdf)
+```
+
+
+
+```{r}
+write.csv(QTCdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
+```
+
+
+
+
+

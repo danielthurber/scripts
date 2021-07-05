@@ -1,0 +1,211 @@
+---
+title: "Correlograms"
+author: "Daniel Thurber"
+date: "5/7/2021"
+output: pdf_document
+---
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A', 
+               'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
+               'Ricks Spring')
+i <- 1
+snofile <- 'KN_1115.csv'
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+#color vector gets used by other plotting scripts.  Attempt to maintain any changes made to the palette
+```
+
+Begin by running SNOTEL and LRO_aquatic scripts to generate the qtc and snodf dataframes as .csv files.  This chunk will re-open them.
+
+```{r}
+qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
+snodf <- read.csv(paste0(mypath,snofile), stringsAsFactors = F)
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+snodf$Date = as.Date(snodf$Date, format = '%Y-%m-%d')
+mindate <- qtc$date[1]
+```
+
+
+
+Calculate autocorrelation functions for each variable and compile in DF
+```{r}
+lagmax <- 360
+Qacf <- acf(qtc$discharge, lag.max = lagmax, type = "correlation", plot = F, na.action = na.pass)
+Tacf <- acf(qtc$temperature, lag.max = lagmax, type = "correlation", plot = F, na.action = na.pass)
+Cacf <- acf(qtc$conductance, lag.max = lagmax, type = "correlation", plot = F, na.action = na.pass)
+
+acfdf <- data.frame('lag' = Cacf$lag, 
+                    'Qval' = c(Qacf$acf, rep(NA,times = lagmax+1-length(Qacf$acf))), #adds NA to missing values
+                    'Tval' = Tacf$acf, 
+                    'Cval' = Cacf$acf)
+
+```
+
+Plot autocorrelation functions for Q, EC, and T at a given site
+```{r}
+plot(acfdf$lag, acfdf$Qval, type = 'l', col='blue',
+     ylab = 'Correlation', xlab = 'Lag', ylim = c(-1,1), main = paste('Autocorrelation functions for' ,sitename))
+lines(acfdf$Tval, col = 'brown4')
+lines(acfdf$Cval, col = 'green')
+legend(155,1, legend = c('discharge', 'conductance', 'temperature'), 
+       lty = 1, col = c('blue', 'green', 'brown4'))
+
+```
+Show the date range of the dataframe
+```{r}
+paste(min(qtc$WY), 'through', max(qtc$WY))
+```
+
+select a specific water year, display the lines with 
+```{r}
+wateryear <- 2018
+wydf <- qtc[which(qtc$WY==wateryear),]
+paste('Missing discharge:')
+which(is.na(wydf$discharge))
+paste('Missing conductance:')
+which(is.na(wydf$conductance))
+nrow(wydf)
+```
+
+```{r}
+plot(wydf$discharge[235:360], type = 'l')
+```
+
+Based on the missing values, identify an interval over which to evaluate the autocorrelation function
+```{r}
+lagmax <- 50  #this should be left at 50
+Qstart <- 1   #first day of extended Q records
+Qend <- 200  #last day of Q records
+Cstart <- 1   #first day of extended SC records
+Cend <- 279   #last day of SC records
+wyQacf <- acf(wydf$discharge[Qstart:Qend], lag.max = lagmax, type = "correlation", plot = F, na.action = na.pass)
+#wyTacf <- acf(wydf$temperature[Cstart:acfend], lag.max = lagmax, type = "correlation", plot = F, na.action = na.pass)
+wyCacf <- acf(wydf$conductance[Cstart:Cend], lag.max = lagmax, type = "correlation", plot = F, na.action = na.pass)
+
+wyacfdf <- data.frame('lag' = wyCacf$lag, 
+                    'Qval' = wyQacf$acf, #adds NA to missing values
+                     
+                    'Cval' = wyCacf$acf)
+qdates <- paste('Q:',format(wydf$date[Qstart], '%m/%d'), 'through' ,format(wydf$date[Qend], '%m/%d'))
+cdates <- paste('C:',format(wydf$date[Cstart], '%m/%d'), 'through' ,format(wydf$date[Cend], '%m/%d'))
+paste(qdates,'    ', cdates)
+```
+
+Create a plot for the particular water year.  Add any relevant notes about the timeframe over which this was evaluated
+```{r}
+plot(wyacfdf$lag, wyacfdf$Qval, type = 'l', col='blue',
+     ylab = 'Correlation', xlab = 'Lag', ylim = c(0,1),
+     main = paste('Autocorrelation functions for' ,sitename, wateryear))
+lines(wyacfdf$Cval, col = 'green')
+legend('topright', legend = c('discharge', 'conductance'), 
+       lty = 1, col = c('blue', 'green'))
+abline(h = .2, lty = 4)
+text(x = 40, y =0.7, labels = qdates)
+#text(x = 40, y =0.7, labels = 'Discharge missing 1/06')
+text(x = 40, y =0.6, labels = cdates)
+text(x = 40, y = 0.5, labels = paste('Q:', which(wyacfdf$Qval<0.2)[1], 'days'))
+text(x = 40, y = 0.4, labels = paste('SC:', which(wyacfdf$Cval<0.2)[1], 'days'))
+
+```
+
+
+
+
+
+This chunk will compile a dataframe with columns for date, melt, rain, discharge, temp, and conductance
+```{r}
+crossdf <- data.frame(date = snodf$Date[which(snodf$Date==mindate):nrow(snodf)])
+crossdf$melt = snodf$melt[which(snodf$Date==mindate):nrow(snodf)]
+crossdf$rain = snodf$rain[which(snodf$Date==mindate):nrow(snodf)]
+for (i in 1:nrow(qtc)){
+  crossdf$discharge[which(crossdf$date == qtc$date[i])] = qtc$discharge[i]
+}
+for (i in 1:nrow(qtc)){
+  crossdf$conductance[which(crossdf$date == qtc$date[i])] = qtc$conductance[i]
+}
+for (i in 1:nrow(qtc)){
+  crossdf$temp[which(crossdf$date == qtc$date[i])] = qtc$temperature[i]
+}
+crossdf$SWI <- crossdf$melt+crossdf$rain
+```
+
+Generate CCF objects for each relationship we are interested in:
+```{r}
+c_by_m <- ccf(crossdf$conductance,crossdf$melt, lag.max = lagmax, plot = F)
+q_by_t <- ccf(crossdf$discharge,crossdf$temp, lag.max = lagmax, plot = F)
+q_by_c <- ccf(crossdf$discharge,crossdf$conductance, lag.max = lagmax, plot = F)
+q_by_m <- ccf(crossdf$discharge,crossdf$melt, lag.max = lagmax, plot = F)
+q_by_r <- ccf(crossdf$discharge,crossdf$rain, lag.max = lagmax, plot = F, na.action = na.pass)
+q_by_swi <- ccf(crossdf$discharge,crossdf$SWI, lag.max = lagmax, plot = F, na.action = na.pass)
+t_by_c <- ccf(crossdf$temp,crossdf$conductance, lag.max = lagmax, plot = F)
+```
+
+Create on plot of all calculated cross-correlations
+```{r}
+par( mar = c(5.1,4.1,4.1,8.1))
+plot(c_by_m$acf~c_by_m$lag, xlab='lag (days)', ylab='correlation',
+     col=linecols[1], type = 'l', ylim=c(-0.4,0.4), xlim = c(0,lagmax))
+lines(q_by_t$acf, col=linecols[2])
+lines(q_by_c$acf, col = linecols[3])
+lines(q_by_m$acf, col = linecols[4])
+lines(q_by_swi$acf, col = linecols[5])
+lines(t_by_c$acf, col = linecols[6])
+lines(q_by_r$acf, col = linecols[7])
+
+par(xpd=T)
+title(main = c("Cross-correlation function for",sitename))
+legend('topright', col = linecols, lty = 1, inset = c(-.3,0),
+       legend = c('ec | melt', 'Q | T', 'Q | ec', 'Q | melt', 'Q | SWI', 'T | ec', 'Q | rain'))
+```
+```{r}
+corrhold <- 0.20
+paste('Lag times for end of correlation at',sitename)
+paste('Discharge:',acfdf$lag[which(acfdf$Qval<corrhold)[1]])
+paste('Conductivity:',acfdf$lag[which(acfdf$Cval<corrhold)[1]])
+paste('Q | melt peaks after', q_by_m$lag[which(q_by_m$acf==max(q_by_m$acf[362:462]))] ,
+      'days at', max(q_by_m$acf[362:462]))
+paste('SC | melt peaks after', c_by_m$lag[which(c_by_m$acf==min(c_by_m$acf[362:462]))] ,
+      'days at', min(c_by_m$acf[362:462]))
+paste('Q | SC peaks after', q_by_c$lag[which(q_by_c$acf==min(q_by_c$acf[362:462]))] ,
+      'days at', min(q_by_c$acf[362:462]))
+```
+Run this chunk to explore correlation values and timing for Q | melt
+```{r}
+poslag <- which(q_by_m$lag>0)
+poslag[1]
+q_by_m$acf[362:462]
+q_by_m$lag[which(abs(q_by_m$acf)>0.20)]
+
+```
+```{r}
+poslag <- which(c_by_m$lag>0)
+poslag[1]
+c_by_m$acf[362:462]
+c_by_m$lag[which(abs(c_by_m$acf)>0.20)]
+```
+
+```{r}
+plot(c_by_m$acf~q_by_m$lag, type = 'l')
+q_by_c$acf[362:462]
+```
+
+Plot multiple relevant/interesting correlograms together
+```{r}
+lagdays <- 80
+plot(acfdf$lag, acfdf$Qval, type = 'l', col='cadetblue4',
+     ylab = 'Correlation', xlab = 'Lag', ylim = c(0.2,1), xlim=c(0,lagdays),
+     main = paste('Mixed correlation functions for' ,sitename))
+lines(acfdf$Cval, col = 'palegreen4')
+lines(q_by_m$acf, col = 'brown4')
+lines(-1*c_by_m$acf, col = linecols[1] )
+legend('topright', legend = c('Q acf', 'SC acf', 'Q | melt', 'C | melt'), 
+       lty = 1, col = c('cadetblue4', 'palegreen4', 'brown4', linecols[1]))
+
+```
+

@@ -1,0 +1,125 @@
+---
+title: "SNOTEL"
+author: "Daniel Thurber"
+date: "5/6/2021"
+output: pdf_document
+---
+
+Input the name of the file within the designated folder and enter initialization values.
+```{r}
+library(naniar)
+library(ggplot2)
+mypath <- 'C:/Users/Daniel/Documents/Research/data/SNOTEL/'
+site <- 'UDD_1098'
+csitename <- "USU Doc Daniel"
+```
+
+
+
+```{r}
+snofile <- paste0(site,'.csv')
+snodf <- read.csv(paste0(mypath,snofile), stringsAsFactors = F)
+```
+
+Add water year, melt, and rain to dataframe
+
+```{r}
+snodf$Date = as.Date(snodf$Date, format = "%m/%d/%Y")
+
+snodf$WY = ifelse(as.numeric(format(snodf$Date,'%m'))>=10, 
+                     as.numeric(format(snodf$Date,'%Y'))+1, 
+                     as.numeric(format(snodf$Date,'%Y'))) #determine water year
+```
+
+```{r}
+snodf$melt = 0
+for (i in 1:nrow(snodf)){ #calculate and report daily melt
+  snodf$melt[i] = max(0,snodf$SWE_in[i-1]-snodf$SWE_in[i]) 
+}
+snodf$rain=0
+for (i in 1:nrow(snodf)){ #calculate and report daily rain
+  snodf$rain[i] = round(max(0,snodf$precip_incre_in[i]-max(0,snodf$SWE_in[i+1]+snodf$SWE_in[i])),2) 
+}
+```
+
+
+
+```{r}
+WaterYear <- 2018
+startday <- 190
+endday <- 320
+```
+
+Create dataframe for the wateryear of interest
+```{r}
+wydf <- data.frame(snodf[which(snodf$WY==WaterYear),])
+wydf$discharge=NA
+
+```
+
+
+
+Show SWE and surface water input together on the same plot
+```{r}
+par(mar = c(5,4,4,4) + 0.3)
+plot(wydf$SWE_in,
+     xlab="WY day", ylab = 'SWE (in)',
+     main = paste("SWE and surface water input at",csitename, 'for', WaterYear),
+     type = 'l')
+legend(5,28, legend = c('SWE', 'Melt', 'Rain'), 
+       lty = 1, col = c('black', 'cadetblue3', 'red3'))
+par(new = T)
+plot(wydf$melt, 
+     xlab = '', ylab = '', type = 'l', axes = F,
+     col = 'cadetblue3')
+lines(wydf$rain, 
+     xlab = '', ylab = '',
+     col="red3")
+axis(side = 4, at = pretty(range(wydf$melt)))      # Add second axis
+mtext("surface water input (in/day)", side = 4, line = 3) 
+#lines(wydf$melt, xlab = '', ylab = '',
+#      col = 'cadetblue3')
+```
+
+```{r}
+write.csv(snodf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
+```
+
+
+Incorporate discharge data if desired
+```{r}
+for (i in 1:nrow(dailyq)){ #this relies on the construction of the dailyq dataframe
+  wydf$discharge[which(wydf$Date==dailyq$date[i])] = dailyq$discharge[i] 
+}
+```
+
+
+plot surface water input with discharge
+```{r}
+par(mar = c(5,4,4,4) + 0.3)
+plot(wydf$discharge[startday:endday],
+     xlab="WY day", ylab = 'Discharge (CMS)',
+     main = paste("discharge and surface water input at",sitename, 'for', WaterYear),
+     type = 'l')
+legend("topright", legend = c('discharge', 'Melt', 'Rain'), 
+       lty = 1, col = c('black', 'cadetblue3', 'red3'))
+par(new = T)
+plot(wydf$melt[startday:endday], 
+     xlab = '', ylab = '', type = 'l', axes = F,
+     col = 'cadetblue3')
+lines(wydf$rain[startday:endday], 
+     xlab = '', ylab = '',
+     col="red3")
+axis(side = 4, at = pretty(range(wydf$melt)))      # Add second axis
+mtext("surface water input (in/day)", side = 4, line = 3) 
+#lines(wydf$melt, xlab = '', ylab = '',
+#      col = 'cadetblue3')
+```
+
+```{r}
+ggplot(data = wydf, aes(x = Date, y = SWE_in))
+```
+```{r}
+write.csv(snodf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
+```
+
