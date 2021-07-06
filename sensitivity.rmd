@@ -8,7 +8,7 @@ output: pdf_document
 
 
 
-This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals and create the qdf, tdf, and cdf objects.
+Create the qdf, tdf, and cdf objects.  This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals.
 ```{r}
 library(naniar)
 library(ggplot2)
@@ -57,7 +57,7 @@ tdf$temperature <- replace(tdf$temperature, tdf$temperature<minT | tdf$temperatu
 ```
 
 
-This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes and create the qtc object.
+Create the qtc object (daily timestep).  This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes. 
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
 library(ggplot2)
@@ -66,7 +66,7 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A',
                'RS_CONF_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
                'Ricks Spring')
-i <- 1
+i <- 2
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -83,7 +83,7 @@ head(qtc,3)
 
 
 The following chunks explore the impact of anomalies within the original data on the ACF of 15-minute data
-----
+---
 
 ```{r}
 a <- 50000  #index of starting time
@@ -149,11 +149,11 @@ legend(155,1, legend = c('QC data', 'constant replacement', 'NA replacement', 'r
 
 
 
-----
+---
 
 
-Below, we look at aggregated daily average values of discharge, conductance, and temperature
-----
+Below, we look at aggregated daily average values of discharge, conductance, and temperature and the effects of specific windows within the water year on the ACF
+---
 Find holes in the time series
 ```{r}
 qholes <- which(is.na(qtc$discharge))
@@ -162,16 +162,18 @@ qholes
 
 plot the discharge series and highlight all missing values.  Using the plot, iteratively focus on a study interval.
 ```{r}
-study.int <- c(1098,1350) #select the study interval here
-plot(qtc$discharge, type = 'l')
+study.int <- c(200,300) #select the study interval here
+plot(qtc$discharge, type = 'n', ylab = 'discharge')
+rect(study.int[1], 0, study.int[2], 20, col = 'deepskyblue')
+lines(qtc$discharge)
 abline(v = qholes, col = 'red')
-plot(qtc$discharge, type = 'l', xlim = study.int, ylim=c(0,10))
+plot(qtc$discharge, type = 'l', xlim = study.int, ylim=c(0,1.2), ylab = 'discharge')
 abline(v = qholes, col = 'red')
 abline(v = study.int[1], lty = 4)
 ```
 create a linear patch.  If there are no holes in the data, set patch start and patchend to the same value.  That will help ensure that later code chunks run properly.
 ```{r}
-patchstart <- 756
+patchstart <- 763
 patchend <- 763
 patchlength <- patchend - patchstart +1
 linpatch <- seq(qtc$discharge[patchstart],qtc$discharge[patchend], length.out= patchlength)
@@ -183,20 +185,21 @@ generate a new dataframe and patch missing data with linear interpolation
 lin.df <- qtc
 lin.df$discharge[patchstart:patchend] <- linpatch
 plot(lin.df$discharge, type = 'l', xlim = c(730,780), ylim=c(0,5), 
-     ylab = 'discharge', main = sitename, col = 'red')
+     ylab = 'discharge', main = paste(sitename, 'patched data'), col = 'red')
 lines(qtc$discharge)
 ```
 
 ```{r}
-a <- 1098  #index of starting time
+a <- study.int[1]  #index of starting time
+#a <- 518
 c <- 130  #window width (number of days)
 b <- a+c    #calculates final index
-b <- 1350
-win1 <- c(a,1150)
-win2 <- c(a,1250)
+b <- study.int[2]   #index of ending time
+win1 <- c(a,1000)
+win2 <- c(a,1050)
 win3 <- c(a,b)
-win4 <- c(1120,b)
-win5 <- c(1140,b)
+win4 <- c(1000,b)
+win5 <- c(1050,b)
 yrange <- c(0,max(qtc$discharge[a:b], na.rm = T))
 
 #plot discharge over the window.  The line gets plotted later over the highlight rectangle
@@ -270,5 +273,89 @@ abline(h = 0.2, lty = 3)
 
 legend('topright', legend = c('QC data', 'patched data'), lty = c(1,2))
 ```
-----
+
+---
+
+
+This section looks at variability in CCF results based on windowing and SNOTEL station selection.  It requires running the "correlograms" script far enough to create the "crossdf" object.  The section on ACF generation can be skipped over.
+
+---
+```{r}
+qholes <- which(is.na(crossdf$discharge))
+mholes <- which(is.na(crossdf$melt))
+choles <- which(is.na(crossdf$conductance))
+choles
+```
+
+
+```{r}
+plot(crossdf$discharge, type = 'l', ylab = 'discharge', main = paste('discharge at', sitename))
+abline(v = qholes, col = 'red')
+
+plot(crossdf$conductance, type = 'l', ylab = 'Conductance', main = paste('Conductance at', sitename))
+abline(v = choles, col = 'red')
+
+plot(crossdf$melt, type = 'l', ylab = 'Melt', main = paste('melt at', sitename))
+abline(v = mholes, col = 'red')
+```
+
+
+```{r}
+study.int <- c(250,420)
+plot(crossdf$melt, xlim = study.int, type = 'l')
+plot(crossdf$discharge, xlim = study.int, type = 'l')
+
+par(mar = c(5,4,4,4) + 0.3)
+barplot(crossdf$melt[study.int[1]:study.int[2]], ylab = 'melt (in)',
+     main = paste('melt and discharge at', sitename), xlab = 'Date')
+abline(v = qholes, col = 'red')
+abline(v = study.int, lty =5)
+
+par(new = T)
+plot(crossdf$discharge[study.int[1]:study.int[2]], 
+     type = 'l', axes = F, ylab = '', xlab = '')
+
+axis(4, at = pretty(range(crossdf$discharge[study.int[1]:study.int[2]],na.rm = T)))
+mtext("discharge (CMS)", side = 4, line = 3)
+axis(1, at = seq(0,diff(study.int), length.out = 6), 
+     labels = (crossdf$date[seq(study.int[1],study.int[2],length.out = 6)]))
+```
+
+```{r}
+a <- study.int[1]  #index of starting time
+#a <- 518
+c <- 130  #window width (number of days)
+b <- a+c    #calculates final index
+b <- study.int[2]   #index of ending time
+win1 <- c(a,300)
+win2 <- c(a,360)
+win3 <- c(a,b)
+win4 <- c(300,b)
+win5 <- c(360,b)
+yrange <- c(0,max(qtc$discharge[a:b], na.rm = T))
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangle
+plot(qtc$discharge, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
+     main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
+     )
+
+#highlight ranges for each window of ACF analysis
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
+rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
+rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
+rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
+rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
+
+#draw and annotate a box around any patches that exist.  Adjust numbers to position vertically
+rect(patchstart, 0.5, patchend, 1.5)  #draw a box around patched section of line
+text(mean(patchstart,patchend), 0.3, 'Patched values')  #annotate patch box
+
+lines(lin.df$discharge, type = 'l', col = 'red')
+lines(qtc$discharge, type = 'l')
+axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6)]))
+
+```
+
+
+
 
