@@ -1,0 +1,82 @@
+---
+title: "UEB Integration"
+author: "Daniel Thurber"
+date: "7/29/2021"
+output: pdf_document
+---
+Input the name of the file within the designated folder and enter initialization values.
+
+
+```{r}
+library(naniar)
+library(ggplot2)
+switpath <- 'C:/Users/Daniel/Documents/Research/data/UEB_outputs/'
+patchpath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/'
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 
+               'RHF_CONF_A', 'RS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 
+               'Right Hand Fork', 'Ricks Spring')
+i <-1
+
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+```
+
+Read the patched data csv into a dataframe
+
+```{r}
+qtc <- read.csv(paste0(patchpath,site,'_patched.csv'), stringsAsFactors = F)
+```
+
+
+format 'date' as a date and generate day column without year, then check the data formats. 
+```{r}
+
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+qtc$day <- format(as.Date(qtc$date),'%m-%d')
+qtc$wyday <- 0
+head(qtc,3)
+```
+
+create a reference dataframe relating water year days to month-day format
+```{r}
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+```
+
+
+Populate water year day column with appropriate values 1-366
+```{r}
+for (i in 1:nrow(qtc)){
+  qtc$wyday[i] <- wydates$wyday[which(wydates$day==qtc$day[i])]
+}
+```
+
+Read the UEB model results into dataframes.  Each column represents a separate water year
+```{r}
+swit.df <- read.csv(paste0(switpath,site,'_SWIT.csv'), stringsAsFactors = F, header = F)
+swe.df <- read.csv(paste0(switpath,site,'_SWE.csv'), stringsAsFactors = F, header = F)
+
+```
+
+Create a new dataframe for model results with all output values stacked in the same column
+```{r}
+mod.df <- data.frame(date = seq.Date(as.Date('1980-10-1','%Y-%m-%d'),as.Date('2018-09-30','%Y-%m-%d'),1))
+mod.df$SWIT <- na.omit(stack(swit.df)$values)
+mod.df$SWE <- na.omit(stack(swe.df)$values)
+#if error: replacement has 13908 rows (should be 13879), replace zeroes in row 366 with NA
+```
+
+Merge dataframes for future cross-correlation.  Only keep rows within the period of record for Q and SC and predicted by UEB model.
+```{r}
+mod.df <- merge(mod.df, qtc, by = 'date')
+```
+
+
+```{r}
+write.csv(mod.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'), row.names = F)
+```
+
+

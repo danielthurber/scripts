@@ -118,10 +118,10 @@ text(x = 40, y = 0.4, labels = paste('SC:', which(wyacfdf$Cval<0.2)[1], 'days'))
 
 
 
-This section generates and plots CCF functions
+This section generates and plots CCF functions from SNOTEL data
 ---
 
-This chunk will compile a dataframe with columns for date, melt, rain, discharge, temp, and conductance
+This chunk will compile the crossdf dataframe with columns for date, melt, rain, discharge, temp, and conductance
 ```{r}
 crossdf <- data.frame(date = snodf$Date[which(snodf$Date==mindate):nrow(snodf)])
 crossdf$melt = snodf$melt[which(snodf$Date==mindate):nrow(snodf)]
@@ -219,4 +219,87 @@ legend('topright', legend = c('Q acf', 'SC acf', 'Q | melt', 'C | melt'),
 
 
 
+This section generates and plots CCF functions from UEB model results
 ---
+This chunk will read in the ***_mod.csv file 
+```{r}
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
+```
+
+```{r}
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+head(crossdf,3)
+```
+
+
+Generate CCF objects for each relationship we are interested in:
+```{r}
+lagmax <- 360
+c_by_swi <- ccf(crossdf$cpatch,crossdf$SWIT, lag.max = lagmax, plot = F)
+q_by_c <- ccf(crossdf$qpatch,crossdf$cpatch, lag.max = lagmax, plot = F)
+q_by_swi <- ccf(crossdf$qpatch,crossdf$SWIT, lag.max = lagmax, plot = F, na.action = na.pass)
+```
+
+Create on plot of all calculated cross-correlations
+```{r}
+par( mar = c(5.1,4.1,4.1,8.1))
+plot(c_by_swi$acf~c_by_swi$lag, xlab='lag (days)', ylab='correlation',
+     col=linecols[1], type = 'l', ylim=c(-0.4,0.4), xlim = c(0,lagmax))
+lines(q_by_c$acf, col = linecols[2])
+lines(q_by_swi$acf, col = linecols[3])
+
+par(xpd=T)
+title(main = c("Cross-correlation function for",sitename))
+legend('topright', col = linecols, lty = 1, inset = c(-.3,0),
+       legend = c('SC | SWIT', 'Q | SC', 'Q | SWIT'))
+```
+```{r}
+corrhold <- 0.20
+paste('Lag times for end of correlation at',sitename)
+paste('Discharge:',acfdf$lag[which(acfdf$Qval<corrhold)[1]])
+paste('Conductivity:',acfdf$lag[which(acfdf$Cval<corrhold)[1]])
+paste('Q | melt peaks after', q_by_m$lag[which(q_by_m$acf==max(q_by_m$acf[362:462]))] ,
+      'days at', max(q_by_m$acf[362:462]))
+paste('SC | melt peaks after', c_by_m$lag[which(c_by_m$acf==min(c_by_m$acf[362:462]))] ,
+      'days at', min(c_by_m$acf[362:462]))
+paste('Q | SC peaks after', q_by_c$lag[which(q_by_c$acf==min(q_by_c$acf[362:462]))] ,
+      'days at', min(q_by_c$acf[362:462]))
+```
+Run this chunk to explore correlation values and timing for Q | melt
+```{r}
+poslag <- which(q_by_m$lag>0)
+poslag[1]
+q_by_m$acf[362:462]
+q_by_m$lag[which(abs(q_by_m$acf)>0.20)]
+
+```
+```{r}
+poslag <- which(c_by_m$lag>0)
+poslag[1]
+c_by_m$acf[362:462]
+c_by_m$lag[which(abs(c_by_m$acf)>0.20)]
+```
+
+```{r}
+plot(c_by_m$acf~q_by_m$lag, type = 'l')
+q_by_c$acf[362:462]
+```
+
+Plot multiple relevant/interesting correlograms together
+```{r}
+lagdays <- 80
+plot(acfdf$lag, acfdf$Qval, type = 'l', col='cadetblue4',
+     ylab = 'Correlation', xlab = 'Lag', ylim = c(0.2,1), xlim=c(0,lagdays),
+     main = paste('Mixed correlation functions for' ,sitename))
+lines(acfdf$Cval, col = 'palegreen4')
+lines(q_by_m$acf, col = 'brown4')
+lines(-1*c_by_m$acf, col = linecols[1] )
+legend('topright', legend = c('Q acf', 'SC acf', 'Q | melt', 'C | melt'), 
+       lty = 1, col = c('cadetblue4', 'palegreen4', 'brown4', linecols[1]))
+
+```
+
+---
+
+
+
