@@ -13,7 +13,9 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A',
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
                'Ricks Spring')
 i <- 1
-snofile <- 'KN_1115.csv'
+
+snofile <- 'TF_1013.csv'
+#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -63,7 +65,7 @@ Show the date range of the dataframe
 paste(min(qtc$WY), 'through', max(qtc$WY))
 ```
 
-select a specific water year, display the lines with 
+select a specific water year, display the lines with missing values 
 ```{r}
 wateryear <- 2018
 wydf <- qtc[which(qtc$WY==wateryear),]
@@ -140,9 +142,9 @@ crossdf$SWI <- crossdf$melt+crossdf$rain
 
 Generate CCF objects for each relationship we are interested in:
 ```{r}
-c_by_m <- ccf(crossdf$conductance,crossdf$melt, lag.max = lagmax, plot = F)
-q_by_t <- ccf(crossdf$discharge,crossdf$temp, lag.max = lagmax, plot = F)
-q_by_c <- ccf(crossdf$discharge,crossdf$conductance, lag.max = lagmax, plot = F)
+c_by_m <- ccf(crossdf$conductance,crossdf$melt, lag.max = lagmax, plot = F, na.action = na.pass)
+q_by_t <- ccf(crossdf$discharge,crossdf$temp, lag.max = lagmax, plot = F, na.action = na.pass)
+q_by_c <- ccf(crossdf$discharge,crossdf$conductance, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_m <- ccf(crossdf$discharge,crossdf$melt, lag.max = lagmax, plot = F)
 q_by_r <- ccf(crossdf$discharge,crossdf$rain, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_swi <- ccf(crossdf$discharge,crossdf$SWI, lag.max = lagmax, plot = F, na.action = na.pass)
@@ -235,8 +237,8 @@ head(crossdf,3)
 Generate CCF objects for each relationship we are interested in:
 ```{r}
 lagmax <- 360
-c_by_swi <- ccf(crossdf$cpatch,crossdf$SWIT, lag.max = lagmax, plot = F)
-q_by_c <- ccf(crossdf$qpatch,crossdf$cpatch, lag.max = lagmax, plot = F)
+c_by_swi <- ccf(crossdf$cpatch,crossdf$SWIT, lag.max = lagmax, plot = F, na.action = na.pass)
+q_by_c <- ccf(crossdf$qpatch,crossdf$cpatch, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_swi <- ccf(crossdf$qpatch,crossdf$SWIT, lag.max = lagmax, plot = F, na.action = na.pass)
 ```
 
@@ -244,7 +246,7 @@ Create on plot of all calculated cross-correlations
 ```{r}
 par( mar = c(5.1,4.1,4.1,8.1))
 plot(c_by_swi$acf~c_by_swi$lag, xlab='lag (days)', ylab='correlation',
-     col=linecols[1], type = 'l', ylim=c(-0.4,0.4), xlim = c(0,lagmax))
+     col=linecols[1], type = 'l', ylim=c(-0.6,0.6), xlim = c(0,lagmax))
 lines(q_by_c$acf, col = linecols[2])
 lines(q_by_swi$acf, col = linecols[3])
 

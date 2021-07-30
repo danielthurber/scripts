@@ -16,7 +16,7 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A',
                'RHF_CONF_A', 'RS_CONF_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 
                'Right Hand Fork', 'Ricks Spring')
-i <-1
+i <-4
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
@@ -63,7 +63,7 @@ swe.df <- read.csv(paste0(switpath,site,'_SWE.csv'), stringsAsFactors = F, heade
 
 Create a new dataframe for model results with all output values stacked in the same column
 ```{r}
-mod.df <- data.frame(date = seq.Date(as.Date('1980-10-1','%Y-%m-%d'),as.Date('2018-09-30','%Y-%m-%d'),1))
+mod.df <- data.frame(date =  seq.Date(as.Date('1980-10-1','%Y-%m-%d'), as.Date('2018-09-30','%Y-%m-%d'),1))
 mod.df$SWIT <- na.omit(stack(swit.df)$values)
 mod.df$SWE <- na.omit(stack(swe.df)$values)
 #if error: replacement has 13908 rows (should be 13879), replace zeroes in row 366 with NA
@@ -73,6 +73,14 @@ Merge dataframes for future cross-correlation.  Only keep rows within the period
 ```{r}
 mod.df <- merge(mod.df, qtc, by = 'date')
 ```
+
+Add a water year column to the dataframe
+```{r}
+mod.df$WY = ifelse(as.numeric(format(mod.df$date,'%m'))>=10, 
+                     as.numeric(format(mod.df$date,'%Y'))+1, 
+                     as.numeric(format(mod.df$date,'%Y'))) #determine water year
+```
+
 
 
 ```{r}

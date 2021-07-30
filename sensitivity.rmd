@@ -189,6 +189,8 @@ plot(lin.df$discharge, type = 'l', xlim = c(730,780), ylim=c(0,5),
 lines(qtc$discharge)
 ```
 
+
+Look at the sensitivity of ACF functions to windowing within a water year
 ```{r}
 a <- study.int[1]  #index of starting time
 #a <- 518
@@ -356,6 +358,123 @@ axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6
 
 ```
 
+UEB model cross correlegrams sensitivity
+---
+This chunk will read in the ***_mod.csv file 
+```{r}
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+head(crossdf,3)
+paste('Site:', site, '-',sitename)
+```
+
+Plot conductance and discharge with data holes highlighted
+```{r}
+qholes <- which(is.na(crossdf$qpatch))
+choles <- which(is.na(crossdf$cpatch))
+
+plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
+abline(v = qholes, col = 'red')
+
+plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
+abline(v = choles, col = 'red')
+```
+```{r}
+wydf <- crossdf[which(crossdf) ,]
+```
 
 
+
+```{r}
+study.int <- c(104,1564)
+plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'discharge', 
+     main = paste('discharge at', sitename)
+     )
+
+```
+
+
+
+```{r}
+a <- study.int[1]  #index of starting time
+#a <- 518
+c <- 130  #window width (number of days)
+b <- a+c    #calculates final index
+b <- study.int[2]   #index of ending time
+win1 <- c(a,468)
+win2 <- c(469,834)
+win3 <- c(834,1199)
+win4 <- c(1200,b)
+win5 <- c(a,b)
+yrange <- c(0,max(crossdf$qpatch[a:b], na.rm = T))
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangle
+plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
+     main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
+     )
+
+#highlight ranges for each window of ACF analysis
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
+rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
+rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
+rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
+rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
+
+#
+
+lines(crossdf$qpatch, type = 'l')
+axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
+
+```
+
+Compute CCF of Q | SWIT within each window.
+```{r}
+lagmax <- 100
+ccf1 <- ccf(crossdf$qpatch[win1[1]:win1[2]], crossdf$SWIT[win1[1]:win1[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf2 <- ccf(crossdf$qpatch[win2[1]:win2[2]], crossdf$SWIT[win2[1]:win2[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf3 <- ccf(crossdf$qpatch[win3[1]:win3[2]], crossdf$SWIT[win3[1]:win3[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf4 <- ccf(crossdf$qpatch[win4[1]:win4[2]], crossdf$SWIT[win4[1]:win4[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf5 <- ccf(crossdf$qpatch[win5[1]:win5[2]], crossdf$SWIT[win5[1]:win5[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+
+```
+
+```{r}
+plot(ccf1$lag, ccf1$acf, type = 'l', col=linecols[1],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,lagmax), 
+     main = paste('Crosscorrelation window sensitivity:', sitename))
+lines(ccf2$acf, col = linecols[2])
+lines(ccf3$acf, col = linecols[3])
+lines(ccf4$acf, col = linecols[4])
+lines(ccf5$acf, col = linecols[5])
+
+abline(h = 0.2, lty = 3)
+
+#legend('topleft', legend = c('2014', '2015', '2016')), 
+```
+
+
+
+
+```{r}
+plot(acf3$lag, acf3$acf, type = 'l', col=linecols[3],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,30),
+     main = paste('Autocorrelation patch sensitivity:', sitename))
+lines(acf3.1$acf, col = linecols[3], lty = 2)
+
+lines(acf4$acf, col = linecols[4])
+lines(acf4.1$acf, col = linecols[4], lty = 2)
+
+lines(acf5$acf, col = linecols[5])
+lines(acf5.1$acf, col = linecols[5], lty = 2)
+
+abline(h = 0.2, lty = 3)
+
+legend('topright', legend = c('QC data', 'patched data'), lty = c(1,2))
+```
 

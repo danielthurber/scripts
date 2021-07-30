@@ -37,11 +37,11 @@ Conductance
 
 Create plots of patched time series and highlight the holes in data
 ```{r}
-plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
-abline(v = qholes, col = 'red')
+#plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
+#abline(v = qholes, col = 'red')
 
-#plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
-#abline(v = choles, col = 'red')
+plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste(' Conductance at', sitename))
+abline(v = choles, col = 'red')
 
 #plot(crossdf$melt, type = 'l', ylab = 'Melt', main = paste('melt at', sitename))
 #abline(v = mholes, col = 'red')
