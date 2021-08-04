@@ -358,7 +358,7 @@ axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6
 
 ```
 
-UEB model cross correlegrams sensitivity
+UEB model cross correlegrams sensitivity.  Run "patching.rmd" and "UEB_integration.rmd" first.
 ---
 This chunk will read in the ***_mod.csv file 
 ```{r}
@@ -380,17 +380,16 @@ abline(v = qholes, col = 'red')
 plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
 abline(v = choles, col = 'red')
 ```
+
+Select a specific study interval
 ```{r}
-wydf <- crossdf[which(crossdf) ,]
-```
+study.int <- c(354,1161)
+yrange <- c(0,max(crossdf$qpatch[study.int[1]:study.int[2]], na.rm = T))
 
-
-
-```{r}
-study.int <- c(104,1564)
-plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'discharge', 
+plot(crossdf$qpatch, xlim = study.int, ylim = yrange, type = 'l', ylab = 'discharge', 
      main = paste('discharge at', sitename)
      )
+abline(v = qholes, col = 'red')
 
 ```
 
@@ -398,23 +397,20 @@ plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'discharg
 
 ```{r}
 a <- study.int[1]  #index of starting time
-#a <- 518
-c <- 130  #window width (number of days)
-b <- a+c    #calculates final index
-b <- study.int[2]   #index of ending time
-win1 <- c(a,468)
-win2 <- c(469,834)
-win3 <- c(834,1199)
-win4 <- c(1200,b)
-win5 <- c(a,b)
-yrange <- c(0,max(crossdf$qpatch[a:b], na.rm = T))
 
-#plot discharge over the window.  The line gets plotted later over the highlight rectangle
+b <- study.int[2]   #index of ending time based on study interval
+win1 <- c(a,431)
+win2 <- c(432,796)
+win3 <- c(797,1161)
+win4 <- c(550,720)
+win5 <- c(a,b)
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
 plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
      main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
      )
 
-#highlight ranges for each window of ACF analysis
+#highlight ranges for each window of CCF analysis
 rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
 rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
 rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
@@ -428,9 +424,15 @@ axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out
 
 ```
 
+Name each window for the legend on the CCF plot, in order from bottom to top with the window highlight rectangles shown above 
+```{r}
+win.names <- c('dry season 16','water year 17','water year 18','wet season','full POR')
+```
+
+
 Compute CCF of Q | SWIT within each window.
 ```{r}
-lagmax <- 100
+lagmax <- 200
 ccf1 <- ccf(crossdf$qpatch[win1[1]:win1[2]], crossdf$SWIT[win1[1]:win1[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
 ccf2 <- ccf(crossdf$qpatch[win2[1]:win2[2]], crossdf$SWIT[win2[1]:win2[2]], lag.max = lagmax, 
@@ -446,16 +448,17 @@ ccf5 <- ccf(crossdf$qpatch[win5[1]:win5[2]], crossdf$SWIT[win5[1]:win5[2]], lag.
 
 ```{r}
 plot(ccf1$lag, ccf1$acf, type = 'l', col=linecols[1],
-     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,lagmax), 
-     main = paste('Crosscorrelation window sensitivity:', sitename))
-lines(ccf2$acf, col = linecols[2])
-lines(ccf3$acf, col = linecols[3])
-lines(ccf4$acf, col = linecols[4])
-lines(ccf5$acf, col = linecols[5])
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,1), xlim = c(0,lagmax), 
+     main = paste('SWIT Crosscorrelation window sensitivity:', sitename))
+lines(ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
+lines(ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
+lines(ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
+lines(ccf5$acf[(lagmax+2):(lagmax*2+1)], col = linecols[5])
 
 abline(h = 0.2, lty = 3)
+abline(h = -0.2, lty = 3)
 
-#legend('topleft', legend = c('2014', '2015', '2016')), 
+legend('topright', legend = win.names, lty = 1, col = linecols[1:5]) 
 ```
 
 
