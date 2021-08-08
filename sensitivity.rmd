@@ -5,18 +5,27 @@ date: "7/2/2021"
 output: pdf_document
 ---
 
-
-
-
-Create the qdf, tdf, and cdf objects.  This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals.
 ```{r}
 library(naniar)
 library(ggplot2)
-mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
 sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 
                'RHF_CONF_A', 'RS_CONF_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 
                'Right Hand Fork', 'Ricks Spring')
+
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+
+rgbmat <- col2rgb(linecols)/255
+```
+
+
+The following chunks explore the impact of anomalies within the original data on the ACF of 15-minute data
+---
+
+Create the qdf, tdf, and cdf objects.  This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals.
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
+
 i <-5
 
 site <- sitecodes[i]               #enter site code for file upload and export
@@ -57,33 +66,9 @@ tdf$temperature <- replace(tdf$temperature, tdf$temperature<minT | tdf$temperatu
 ```
 
 
-Create the qtc object (daily timestep).  This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes. 
-```{r}
-mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
-library(ggplot2)
-library(naniar)
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 'RHF_CONF_A', 
-               'RS_CONF_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork', 
-               'Ricks Spring')
-i <- 2
-site <- sitecodes[i]               #enter site code for file upload and export
-sitename <- sitenames[i]        #enter site name for plotting
-paste('Site:', sitecodes[i], '-', sitenames[i])
-   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
-
-qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
-
-qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
-qtc$day <- format(as.Date(qtc$date),'%m-%d')
-qtc$wyday <- 0
-head(qtc,3)
-```
 
 
-The following chunks explore the impact of anomalies within the original data on the ACF of 15-minute data
----
+
 
 ```{r}
 a <- 50000  #index of starting time
@@ -154,6 +139,25 @@ legend(155,1, legend = c('QC data', 'constant replacement', 'NA replacement', 'r
 
 Below, we look at aggregated daily average values of discharge, conductance, and temperature and the effects of specific windows within the water year on the ACF
 ---
+Create the qtc object (daily timestep).  This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes. 
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+
+qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
+
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+qtc$day <- format(as.Date(qtc$date),'%m-%d')
+qtc$wyday <- 0
+head(qtc,3)
+```
+
 Find holes in the time series
 ```{r}
 qholes <- which(is.na(qtc$discharge))
@@ -358,10 +362,19 @@ axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6
 
 ```
 
+
+
 UEB model cross correlegrams sensitivity.  Run "patching.rmd" and "UEB_integration.rmd" first.
 ---
 This chunk will read in the ***_mod.csv file 
 ```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+
+#sitenames are 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 6:Ricks Spring)
+i <- 1
+
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]
 crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
 
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
@@ -371,19 +384,25 @@ paste('Site:', site, '-',sitename)
 
 Plot conductance and discharge with data holes highlighted
 ```{r}
+date.mark <- '03-15' #vertical blue lines will be drawn at this date for reference
+
 qholes <- which(is.na(crossdf$qpatch))
 choles <- which(is.na(crossdf$cpatch))
 
 plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
 abline(v = qholes, col = 'red')
+abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
+
 
 plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
 abline(v = choles, col = 'red')
+abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
+
 ```
 
 Select a specific study interval
 ```{r}
-study.int <- c(354,1161)
+study.int <- c(230,483)
 yrange <- c(0,max(crossdf$qpatch[study.int[1]:study.int[2]], na.rm = T))
 
 plot(crossdf$qpatch, xlim = study.int, ylim = yrange, type = 'l', ylab = 'discharge', 
@@ -393,29 +412,42 @@ abline(v = qholes, col = 'red')
 
 ```
 
+```{r}
+which(crossdf$wyday==1)
+```
+
 
 
 ```{r}
 a <- study.int[1]  #index of starting time
 
 b <- study.int[2]   #index of ending time based on study interval
-win1 <- c(a,431)
-win2 <- c(432,796)
-win3 <- c(797,1161)
-win4 <- c(550,720)
-win5 <- c(a,b)
+win1 <- c(a,a+205)  #red rect
+win2 <- c(a+40,a+220)  #yellow rect
+win3 <- c(a+40,a+205)  #green rect
+win4 <- c(a+0,a+220)   #gray rect
+win5 <- c(a,b)    #blue rect
 
+barplot(crossdf$SWIT[study.int[1]:study.int[2]], axes = F)
+axis(side = 4, at = pretty(range(crossdf$SWIT[a:b]), n = 2))
+
+par(new=T)
 #plot discharge over the window.  The line gets plotted later over the highlight rectangles
 plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
-     main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
+     main = paste('discharge at', sitename,crossdf$WY[a]), xaxt = 'n', xlab = 'date'
      )
 
 #highlight ranges for each window of CCF analysis
-rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
-rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
-rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
-rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
-rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,1],rgbmat[2,1],rgbmat[3,1], alpha = 0.5))
+rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,2],rgbmat[2,2],rgbmat[3,2], alpha = 0.5))
+rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,3],rgbmat[2,3],rgbmat[3,3], alpha = 0.5))
+rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,4],rgbmat[2,4],rgbmat[3,4], alpha = 0.5))
+rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  border = NA, 
+     col = rgb(rgbmat[1,5],rgbmat[2,5],rgbmat[3,5], alpha = 0.5))
 
 #
 
@@ -426,7 +458,15 @@ axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out
 
 Name each window for the legend on the CCF plot, in order from bottom to top with the window highlight rectangles shown above 
 ```{r}
-win.names <- c('dry season 16','water year 17','water year 18','wet season','full POR')
+#automatically enters date ranges to the legend for each window
+win.names <- c(paste(crossdf$day[win1[1]], 'to', crossdf$day[win1[2]]),
+               paste(crossdf$day[win2[1]], 'to', crossdf$day[win2[2]]), 
+               paste(crossdf$day[win3[1]], 'to', crossdf$day[win3[2]]),
+               paste(crossdf$day[win4[1]], 'to', crossdf$day[win4[2]]),
+               paste(crossdf$day[win5[1]], 'to', crossdf$day[win5[2]]))
+
+
+#win.names <- c('3/5-8/12','4/4-10/11','4/4-8/12','3/5-10/11','4/4-11/10')
 ```
 
 
@@ -448,8 +488,8 @@ ccf5 <- ccf(crossdf$qpatch[win5[1]:win5[2]], crossdf$SWIT[win5[1]:win5[2]], lag.
 
 ```{r}
 plot(ccf1$lag, ccf1$acf, type = 'l', col=linecols[1],
-     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,1), xlim = c(0,lagmax), 
-     main = paste('SWIT Crosscorrelation window sensitivity:', sitename))
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.9), xlim = c(0,50), 
+     main = paste('Q|SWIT Crosscorrelation window sensitivity:', sitename, crossdf$WY[a]))
 lines(ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
 lines(ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
 lines(ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
@@ -458,26 +498,11 @@ lines(ccf5$acf[(lagmax+2):(lagmax*2+1)], col = linecols[5])
 abline(h = 0.2, lty = 3)
 abline(h = -0.2, lty = 3)
 
-legend('topright', legend = win.names, lty = 1, col = linecols[1:5]) 
+legend('bottomleft', legend = win.names, lty = 1, col = linecols[1:5]) 
 ```
 
 
 
 
-```{r}
-plot(acf3$lag, acf3$acf, type = 'l', col=linecols[3],
-     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,30),
-     main = paste('Autocorrelation patch sensitivity:', sitename))
-lines(acf3.1$acf, col = linecols[3], lty = 2)
 
-lines(acf4$acf, col = linecols[4])
-lines(acf4.1$acf, col = linecols[4], lty = 2)
-
-lines(acf5$acf, col = linecols[5])
-lines(acf5.1$acf, col = linecols[5], lty = 2)
-
-abline(h = 0.2, lty = 3)
-
-legend('topright', legend = c('QC data', 'patched data'), lty = c(1,2))
-```
 
