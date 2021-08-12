@@ -1,0 +1,57 @@
+---
+title: "Metrics"
+author: "Daniel Thurber"
+date: "8/10/2021"
+output: pdf_document
+---
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
+               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
+               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+
+```
+
+
+
+This chunk will read in the ***_mod.csv file 
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+
+#sitenames- 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 
+#6:Ricks Spring, 7:Sawmill, 8:Spawn, 9:Wood Camp, 10:Guinavah)
+
+i <- 2
+
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+head(crossdf,3)
+paste('Site:', site, '-',sitename)
+```
+
+```{r}
+wateryears <- crossdf$WY[which(crossdf$wyday==1)]
+wateryears
+sum(crossdf$WY==2015)
+sum(crossdf$WY==2016)
+sum(crossdf$WY==2017)
+sum(crossdf$WY==2018)
+
+```
+
+
+```{r}
+paste('Annual water input totals for', sitename)
+paste(2015, sum(crossdf$SWIT[which(crossdf$WY==2015)]))
+paste(2016, sum(crossdf$SWIT[which(crossdf$WY==2016)]))
+paste(2017, sum(crossdf$SWIT[which(crossdf$WY==2017)]))
+paste(2018, sum(crossdf$SWIT[which(crossdf$WY==2018)]))
+```
+

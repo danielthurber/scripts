@@ -8,10 +8,10 @@ output: pdf_document
 ```{r}
 library(naniar)
 library(ggplot2)
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A', 
-               'RHF_CONF_A', 'RS_CONF_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 
-               'Right Hand Fork', 'Ricks Spring')
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
+               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
+               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
 
 linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
 
@@ -25,6 +25,8 @@ The following chunks explore the impact of anomalies within the original data on
 Create the qdf, tdf, and cdf objects.  This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals.
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
+
+#sitenames are 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 6:Ricks Spring)
 
 i <-5
 
@@ -71,8 +73,8 @@ tdf$temperature <- replace(tdf$temperature, tdf$temperature<minT | tdf$temperatu
 
 
 ```{r}
-a <- 50000  #index of starting time
-c <- 30000  #window width (number of 15-min intervals)
+a <- 1  #index of starting time
+c <- nrow(qdf)  #window width (number of 15-min intervals)
 b <- a+c    #calculates final index
 
 #plot discharge over the window.  The line gets plotted later over the highlight rectangle
@@ -371,7 +373,7 @@ This chunk will read in the ***_mod.csv file
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
 
 #sitenames are 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 6:Ricks Spring)
-i <- 1
+i <- 4
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]
@@ -384,51 +386,85 @@ paste('Site:', site, '-',sitename)
 
 Plot conductance and discharge with data holes highlighted
 ```{r}
-date.mark <- '03-15' #vertical blue lines will be drawn at this date for reference
+date.mark <- '02-15' #vertical blue lines will be drawn at this date for reference
 
 qholes <- which(is.na(crossdf$qpatch))
 choles <- which(is.na(crossdf$cpatch))
-
-plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
-abline(v = qholes, col = 'red')
-abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
-
 
 plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
 abline(v = choles, col = 'red')
 abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
 
+plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
+abline(v = qholes, col = 'red')
+abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
+
+which(crossdf$day == date.mark)
 ```
 
 Select a specific study interval
 ```{r}
-study.int <- c(230,483)
+study.int <- c(460,760)
+a <- study.int[1]  #index of starting time
+b <- study.int[2]   #index of ending time based on study interval
+
+
 yrange <- c(0,max(crossdf$qpatch[study.int[1]:study.int[2]], na.rm = T))
 
+barplot(crossdf$SWIT[a:b], axes = F)
+axis(side = 4, at = pretty(range(crossdf$SWIT[study.int[1]:study.int[2]]), n = 2))
+par(new=T)
 plot(crossdf$qpatch, xlim = study.int, ylim = yrange, type = 'l', ylab = 'discharge', 
-     main = paste('discharge at', sitename)
+     main = paste('discharge at', sitename, crossdf$WY[a], '-', crossdf$WY[b-60])
      )
 abline(v = qholes, col = 'red')
-
+abline(v = 550, col = 'green')
 ```
 
 ```{r}
 which(crossdf$wyday==1)
 ```
+This plot will be useful for determining a window over which to characterize the CCF for a give water year
+```{r}
+a <- 210
+b <- 450
 
+win1 <- c(a+20,b-20)  #red rect
+    #blue rect
+
+barplot(crossdf$SWIT[study.int[1]:study.int[2]], axes = F)
+axis(side = 4, at = pretty(range(crossdf$SWIT[a:b]), n = 2))
+
+par(new=T)
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
+     main = paste('discharge at', sitename,crossdf$WY[a]), xaxt = 'n', xlab = 'date'
+     )
+
+#highlight ranges for each window of CCF analysis
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,1],rgbmat[2,1],rgbmat[3,1], alpha = 0.5))
+
+
+lines(crossdf$qpatch, type = 'l')
+axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
+
+```
 
 
 ```{r}
 a <- study.int[1]  #index of starting time
-
 b <- study.int[2]   #index of ending time based on study interval
-win1 <- c(a,a+205)  #red rect
-win2 <- c(a+40,a+220)  #yellow rect
-win3 <- c(a+40,a+205)  #green rect
-win4 <- c(a+0,a+220)   #gray rect
-win5 <- c(a,b)    #blue rect
 
-barplot(crossdf$SWIT[study.int[1]:study.int[2]], axes = F)
+
+
+win1 <- c(a,a+180)  #red rect
+win2 <- c(a+0,a+195)  #yellow rect
+win3 <- c(a+0,a+210)  #green rect
+win4 <- c(a+0,a+220)   #gray rect
+win5 <- c(a,a+230)    #blue rect
+
+barplot(crossdf$SWIT[a:b], axes = F)
 axis(side = 4, at = pretty(range(crossdf$SWIT[a:b]), n = 2))
 
 par(new=T)
@@ -455,6 +491,9 @@ lines(crossdf$qpatch, type = 'l')
 axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
 
 ```
+
+
+
 
 Name each window for the legend on the CCF plot, in order from bottom to top with the window highlight rectangles shown above 
 ```{r}
