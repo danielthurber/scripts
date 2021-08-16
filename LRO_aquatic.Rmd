@@ -14,7 +14,7 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
                'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
                'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <-5
+i <-8
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
@@ -55,6 +55,7 @@ paste('End of record:', maxdate)
 ```
 
 
+
 Add column for date and discharge/conductance/temperature, replace all low values with NA
 ```{r}
 minQ <- 0.00                     #below these thresholds, values will be replaced with NA
@@ -90,8 +91,8 @@ plot(tdf$temperature~tdf$date, type = "l", xlab = 'Date', ylab = 'Temperature')
 ```
 zoom in on a specific time window
 ```{r}
-a <- 62400     #window starting index from plot above
-c <- 500  #window length (15-min intervals)
+a <- 18900     #window starting index from plot above
+c <- 100  #window length (15-min intervals)
 b <- a+c
 plot(qdf$discharge[a:b], type = "l", xlab = 'Date', 
      ylab = 'Discharge', xaxt='n', main = paste('Discharge at', site))

@@ -12,10 +12,8 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
                'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
                'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <- 1
+i <- 6
 
-snofile <- 'TF_1013.csv'
-#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -34,6 +32,9 @@ crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 Begin by running SNOTEL and LRO_aquatic scripts to generate the qtc and snodf dataframes as .csv files.  This chunk will re-open them.
 
 ```{r}
+snofile <- 'TGL_823.csv'
+#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
+
 qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
 snodf <- read.csv(paste0(mypath,snofile), stringsAsFactors = F)
 qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
@@ -56,21 +57,15 @@ for (i in 1:nrow(qtc)){
   crossdf$temp[which(crossdf$date == qtc$date[i])] = qtc$temperature[i]
 }
 crossdf$SWI <- crossdf$melt+crossdf$rain
-```
 
-This section looks at holes in the data and patches them.  It requires running the "correlograms" script far enough to create the "crossdf" object.  The section on ACF generation in that script can be skipped over.  
-
-The output of this file will be a new .csv file with updated columns to include patched data.
-
----
-
-
-
-Add columns to the crossdf dataframe for patched versions of data
-```{r}
 crossdf$cpatch <- crossdf$conductance
 crossdf$qpatch <- crossdf$discharge
 ```
+
+
+
+
+
 ```{r}
 qholes <- which(is.na(crossdf$qpatch))
 mholes <- which(is.na(crossdf$melt))
@@ -79,7 +74,9 @@ choles <- which(is.na(crossdf$cpatch))
 ```
 
 ```{r}
+paste('discharge:') 
 qholes
+paste('conductance:')
 choles
 
 ```
@@ -89,12 +86,19 @@ Generate plots
 ```{r}
 plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Discharge at', sitename))
 abline(v = qholes, col = 'red')
-abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='cadetblue')
+abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='goldenrod2')
 
 
 plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Conductance at', sitename))
 abline(v = choles, col = 'red')
-abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='cadetblue')
+abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='goldenrod2')
+
+plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Discharge at', sitename),
+     axes = F, xlab = '')
+abline(v = qholes, col = 'red')
+abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='goldenrod2')
+axis(1, at = seq(1,nrow(crossdf), length.out = 7), 
+     labels = (crossdf$date[seq(1,nrow(crossdf),length.out = 7)]))
 
 #plot(crossdf$melt, type = 'l', ylab = 'Melt', main = paste('melt at', sitename))
 #abline(v = mholes, col = 'red')
@@ -102,14 +106,16 @@ abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='cadetblue')
 Conductance
 --- 
 
-Create plot of patched time series and highlight the holes in data
+Create plot of patched time series and highlight the holes in data (red) and patches (green)
 ```{r}
 #plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
 #abline(v = qholes, col = 'red')
 
-plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
+plot(crossdf$cpatch, type = 'n', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
+abline(v = which(is.na(crossdf$conductance)), col = 'seagreen2')
 abline(v = choles, col = 'red')
-abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='cadetblue')
+abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='goldenrod2')
+lines(crossdf$cpatch)
 
 #plot(crossdf$melt, type = 'l', ylab = 'Melt', main = paste('melt at', sitename))
 #abline(v = mholes, col = 'red')
@@ -117,14 +123,17 @@ abline(v = which(format(crossdf$date,'%m-%d')=='10-01'), col='cadetblue')
 
 Zoom in on a section of the conductance plot worth patching
 
+
+
 ```{r}
-patch.int <- c(1725,1735)
+patch.int <- c(940, 980)
 
 #patch.rng <- range(crossdf$cpatch[patch.int[1]:patch.int[2]], na.rm = T)
 #choles
 
 patch.rng <- range(crossdf$cpatch[patch.int[1]:patch.int[2]], na.rm = T)
-
+crossdf$date[mean(patch.int)]
+choles
 
 plot(crossdf$cpatch, xlim=patch.int, type= 'l', main = sitename, ylab = 'conductance')
 abline(v = choles, col = 'red')
@@ -133,10 +142,22 @@ abline(v = choles, col = 'red')
 #abline(v = qholes, col = 'red')
 
 ```
+
+for single patches, enter the index (in console) to interpolate
+```{r}
+spike <- as.integer(readline(prompt = "Enter index to patch:")) #enter prompt in console
+crossdf$cpatch[spike] <- mean(crossdf$cpatch[(spike-1):(spike+1)], na.rm = T) #range can be adjusted
+choles <- which(is.na(crossdf$cpatch))
+```
+
 find the length of the patch
 ```{r}
 patch.len <-  sum(is.na(crossdf$cpatch[patch.int[1]:patch.int[2]]))
+i1 <- 61 #first index of choles to consider
+i2 <- 13 #final value of choles to consider
+i2 <- i1-1+patch.len
 patch.len 
+paste('replace from index', choles[i1], 'to', choles[i2])
 ```
 
 Create vectors of the values within the patch interval on which to evaluate a regression model
@@ -155,24 +176,14 @@ abline(patch.mod$coefficients)
  
 
 Generate and insert a horizontal noise patch. 
-i1 and i2 values must be set each time!!!! 
-
 ```{r}
-
-i1 <- 1 #first index of choles to consider
-i2 <- 6 #final value of choles to consider
-i2 <- i1-1+patch.len #if i1 = 1, this will automatically set the interval
 patchvals <- runif(i2-i1+1,patch.rng[1], patch.rng[2])  
 #patch.rng represents the range of values over the surrounding interval
 crossdf$cpatch[choles[i1]:choles[i2]] = patchvals
 ```
 
 Generate and insert a linear patch
-i1 and i2 values MUST BE SET EACH TIME!!!
 ```{r}
-i1 <- 1 #first index of choles to consider
-i2 <- 13 #final value of choles to consider
-i2 <- i1-1+patch.len
 patchvals <- seq(crossdf$cpatch[choles[i1]-1],
                  crossdf$cpatch[choles[i2]+1],
                  length.out = i2-i1+3)
@@ -182,14 +193,14 @@ crossdf$cpatch[(choles[i1]-1):(choles[i2]+1)] = patchvals
 check the patch
 ```{r}
 plot(crossdf$cpatch, xlim=patch.int, type= 'l', ylab = 'conductance', 
-     main = sitename, col = 'red')
+     main = sitename, col = 'seagreen2')
 lines(crossdf$conductance, xlim=patch.int)
 
 ```
 If there was a problem, set up this chunk to undo it (set indices to replace cpatch):
 ```{r}
-j <- 230
-k <- 235
+j <- patch.int[1]
+k <- patch.int[2]
 
 crossdf$cpatch[j:k]=crossdf$conductance[j:k]
 
@@ -215,42 +226,56 @@ Discharge
 Create plots of patched time series and highlight the holes in data
 ```{r}
 date.mark <- '03-15' #vertical blue lines will be drawn at this date for reference
-plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
+plot(crossdf$qpatch, type = 'n', ylab = 'discharge', main = paste('Patched discharge at', sitename))
+abline(v = which(is.na(crossdf$discharge)), col = 'seagreen2')
 abline(v = qholes, col = 'red')
+lines(crossdf$qpatch)
 
 #add lines on the defined date to delineate water years
 #abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
 
-
+#rgb(78,238,148, alpha = 0, maxColorValue = 255)
 ```
 
 Zoom in on a section of the discharge plot worth patching
 
 ```{r}
-patch.int <- c(282,291)
+patch.int <- c(546, 580)
 
 patch.rng <- range(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)
-qholes
+#qholes
 
-plot(crossdf$qpatch, xlim=patch.int, type= 'l', main = sitename, ylab = 'discharge')
+plot(crossdf$qpatch, xlim=patch.int, type= 'l', main = sitename, ylab = 'discharge', col = 'seagreen2')
 abline(v = qholes, col = 'red')
+lines(crossdf$discharge)
 
 ```
+
+
+for single patches, enter the index (in console) to interpolate
+```{r}
+spike <- as.integer(readline(prompt = "Enter index to patch:")) #enter prompt in console
+crossdf$qpatch[spike] <- mean(crossdf$qpatch[(spike-1):(spike+1)], na.rm = T) #range can be adjusted
+qholes <- which(is.na(crossdf$qpatch))
+```
+
 find the length of the patch
 ```{r}
 patch.len <-  sum(is.na(crossdf$qpatch[patch.int[1]:patch.int[2]]))
+i1 <- 1 #first index of qholes to consider
+i2 <- 6 #final value of qholes to consider
+i2 <- i1-1+patch.len
 patch.len 
+paste('replace from index', qholes[i1], 'to', qholes[i2])
 ```
 
 
 -----------Consider an exponential regression model
-
 Create vectors of the values within the patch interval on which to evaluate a regression model
 ```{r}
 reg.vals <- crossdf$qpatch[patch.int[1]:patch.int[2]]
 reg.ind <- seq(length.out = length(reg.vals))
 ```
-
 plot the log-transformed values and a fitted linear model and consider the validity of an exponential patch
 ```{r}
 patch.mod <- lm(log(reg.vals)~reg.ind)
@@ -261,37 +286,34 @@ abline(patch.mod$coefficients)
  
 
 -----------------Generate and insert a horizontal noise patch. 
-i1 and i2 values must be set each time!!!!
-
 ```{r}
-
-i1 <- 1 #first index of qholes to consider
-i2 <- 6 #final value of qholes to consider
-i2 <- i1-1+patch.len
-
 patchvals <- runif(i2-i1+1,patch.rng[1], patch.rng[2])  
 #patch.rng represents the range of values over the surrounding interval
 crossdf$qpatch[qholes[i1]:qholes[i2]] = patchvals
 ```
 
 
-
 --------------Generate and insert a linear patch
-i1 and i2 values MUST BE SET EACH TIME!!!
 ```{r}
-i1 <- 1 #first index of qholes to consider
-i2 <- 6 #final value of qholes to consider
-i2 <- i1-1+patch.len
 patchvals <- seq(crossdf$qpatch[qholes[i1]-1],
                  crossdf$qpatch[qholes[i2]+1],
                  length.out = i2-i1+3)
 crossdf$qpatch[(qholes[i1]-1):(qholes[i2]+1)] = patchvals
 ```
 
+
+
 check the patch
 ```{r}
 plot(crossdf$qpatch, xlim=patch.int, type= 'l', ylab = 'Discharge', 
-     main = sitename, col = 'red')
+     main = sitename, col = 'seagreen2', xlab = 'date', xaxt = 'n')
+lines(crossdf$discharge, xlim=patch.int)
+axis(1, at = seq(patch.int[1], patch.int[2], length.out = 6), 
+     labels = (crossdf$date[seq(patch.int[1], patch.int[2],length.out = 6)]))
+
+
+plot(crossdf$qpatch, xlim=patch.int, type= 'l', ylab = 'Discharge', 
+     main = sitename, col = 'seagreen2')
 lines(crossdf$discharge, xlim=patch.int)
 
 ```
