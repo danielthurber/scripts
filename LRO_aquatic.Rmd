@@ -14,13 +14,13 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
                'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
                'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <-8
+i <-10
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
 maxT <- 100 #initially set these values high
-maxC <- 1000 #they can be honed in later in the script
+maxC <- 1500 #they can be honed in later in the script
 ```
 
 Open all files and save as dataframes.
@@ -53,14 +53,20 @@ maxdate <- max(qend,cend, tend)
 maxdate <- as.Date(maxdate, '%m / %d / %Y')
 paste('End of record:', maxdate)
 ```
+Plot each series as is
+```{r}
+plot(qdf$Value, type = 'l', main = 'discharge', ylab = 'discharge', ylim = c(0, max(qdf$Value, na.rm = T)))
+plot(cdf$Value, type = 'l', main = 'conductance', ylab = 'conductance', ylim = c(0, max(cdf$Value, na.rm = T)))
+plot(tdf$Value, type = 'l', main = paste('temp at', sitename), ylab = 'temp', ylim = c(0, max(tdf$Value, na.rm = T)))
+```
 
 
 
 Add column for date and discharge/conductance/temperature, replace all low values with NA
 ```{r}
-minQ <- 0.00                     #below these thresholds, values will be replaced with NA
-minT <- 0
-minC <- 0
+minQ <- -0.01                     #below these thresholds, values will be replaced with NA
+minT <- -1
+minC <- 10
 #maxQ <- 
 maxT <- 200
 maxC <- 8000
@@ -89,16 +95,40 @@ plot(qdf$discharge, type = "l", xlab = 'Date', ylab = 'Discharge')
 plot(cdf$conductance~cdf$date, type = "l", xlab = "Date", ylab = "Specific Conductance")
 plot(tdf$temperature~tdf$date, type = "l", xlab = 'Date', ylab = 'Temperature')
 ```
-zoom in on a specific time window
+zoom in on a specific time window - conductance
 ```{r}
-a <- 18900     #window starting index from plot above
-c <- 100  #window length (15-min intervals)
+a <- 70000     #window starting index from plot above
+c <- 15000  #window length (15-min intervals)
+b <- a+c
+
+plot(cdf$conductance[a:b], type = "l", xlab = 'Date', 
+     ylab = 'Conductance', xaxt='n', main = paste('Conductance at', site))
+axis(1, at = seq(1,c, length.out = 6), labels = (qdf$date[seq(a,b,length.out = 6)]))
+
+plot(cdf$conductance, type = "l", xlim = c(a,b), ylim = c(min(cdf$conductance[a:b], na.rm= T),max(cdf$conductance[a:b], na.rm=T)),
+     ylab = 'Conductance', main = paste('Conductance at', site))
+```
+replace an individual value - conductance
+```{r}
+spike.ind <- 
+cdf$conductance[spike.ind]
+cdf$conductance[spike.ind] <- cdf$conductance[spike.ind-1]
+cdf$conductance[spike.ind]
+
+```
+
+zoom in on a specific time window - discharge
+```{r}
+a <- 98000     #window starting index from plot above
+c <- 1000  #window length (15-min intervals)
 b <- a+c
 plot(qdf$discharge[a:b], type = "l", xlab = 'Date', 
      ylab = 'Discharge', xaxt='n', main = paste('Discharge at', site))
-axis(1, at = seq(0,c, length.out = 6), labels = (qdf$date[seq(a,b,length.out = 6)]))
-```
+axis(1, at = seq(1,c, length.out = 6), labels = (qdf$date[seq(a,b,length.out = 6)]))
 
+plot(qdf$discharge, type = "l", xlim = c(a,b), ylim = c(min(qdf$discharge[a:b], na.rm = T),max(qdf$discharge[a:b], na.rm = T)),
+     ylab = 'Discharge', main = paste('Discharge at', site))
+```
 
 Calculate daily mean for each variable.  NA values are ignored.
 ```{r}
@@ -117,6 +147,7 @@ plot(dailyq$discharge~dailyq$date, type = "l", xlab = 'Date', ylab = 'Discharge'
 plot(dailyc$conductance~dailyc$date, type = "l", xlab = "Date", ylab = "Specific Conductance")
 plot(dailyt$temperature~dailyt$date, type = "l", xlab = 'Date', ylab = 'Temperature')
 ```
+
 
 merge dataframes for all overlapping values
 
@@ -168,8 +199,7 @@ plot(qtcdf$date[day1:dayend],qtcdf$temperature[day1:dayend], type = 'l', col = '
 
 plot(qtcdf$date[day1:dayend],qtcdf$conductance[day1:dayend], type = 'l', col = 'cadetblue4',
      xlab = "date", ylab = "conductance ", main = paste("conductance at ", sitename))
-day1 <- 1
-dayend <- nrow(qtcdf)
+
 ```
 
 

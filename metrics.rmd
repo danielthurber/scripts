@@ -12,6 +12,8 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
                'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
                'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
+siteareas <- c(65976700, 277965000, 103401500, 41407600, 65198600, 
+               NA, 8606500, 14716800, 403874000, 520833100)
 linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
 
 ```
@@ -25,7 +27,7 @@ mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as 
 #sitenames- 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 
 #6:Ricks Spring, 7:Sawmill, 8:Spawn, 9:Wood Camp, 10:Guinavah)
 
-i <- 2
+i <- 4
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]
@@ -46,7 +48,7 @@ sum(crossdf$WY==2018)
 
 ```
 
-
+Calculate total SWIT
 ```{r}
 paste('Annual water input totals for', sitename)
 paste(2015, sum(crossdf$SWIT[which(crossdf$WY==2015)]))
@@ -55,3 +57,19 @@ paste(2017, sum(crossdf$SWIT[which(crossdf$WY==2017)]))
 paste(2018, sum(crossdf$SWIT[which(crossdf$WY==2018)]))
 ```
 
+```{r}
+paste('discharge (cubic m) totals for', sitename)
+paste(2015, mean(crossdf$qpatch[which(crossdf$WY==2015)])*31536000)
+paste(2016, mean(crossdf$qpatch[which(crossdf$WY==2016)])*31622400)
+paste(2017, mean(crossdf$qpatch[which(crossdf$WY==2017)])*31536000)
+paste(2018, mean(crossdf$qpatch[which(crossdf$WY==2018)])*31536000)
+```
+
+
+```{r}
+paste('discharge (m) totals for', sitename)
+paste(2015, mean(crossdf$qpatch[which(crossdf$WY==2015)])*31536000/siteareas[i])
+paste(2016, mean(crossdf$qpatch[which(crossdf$WY==2016)])*31622400/siteareas[i])
+paste(2017, mean(crossdf$qpatch[which(crossdf$WY==2017)])*31536000/siteareas[i])
+paste(2018, mean(crossdf$qpatch[which(crossdf$WY==2018)])*31536000/siteareas[i])
+```

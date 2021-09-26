@@ -404,7 +404,7 @@ which(crossdf$day == date.mark)
 
 Select a specific study interval
 ```{r}
-study.int <- c(460,760)
+study.int <- c(550,760)
 a <- study.int[1]  #index of starting time
 b <- study.int[2]   #index of ending time based on study interval
 
