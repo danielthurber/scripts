@@ -9,16 +9,29 @@ linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sie
 rgbmat <- col2rgb(linecols)/255
 ```
 
-
+enter names of the associated gauge and snotel site from O2 Watersheds document or file explorer
 ```{r}
-basin.name <- 'Cub River'
-sitename <- 'Franklin Basin'
+basin.name <- 'Cub River' #Name of the USGS gauge
+sitename <- 'Franklin Basin' #Name of the SNOTEL site
 ```
 
 ```{r}
 snoflow <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/O2_time_series/',basin.name,'_',sitename,'.csv'))
 snoflow$date <- as.Date(snoflow$date,'%Y-%m-%d')
 ```
+
+Generate a separate dataframe for use with the Functional Flows Calculator
+```{r}
+head(snoflow[,c(2,10)])
+FFC.df <- data.frame(date = format(snoflow$date, '%m/%d/%Y'), flow = snoflow$discharge)
+head(FFC.df)
+plot(FFC.df$flow, type = 'l')
+```
+
+```{r}
+write.csv(FFC.df,paste0('C:/Users/Daniel/Documents/Research/data/O2_time_series/FFC_inputs/',basin.name,'_',sitename,'_FFC.csv'), row.names = F)
+```
+
 
 ```{r}
 range(snoflow$WY)
@@ -29,7 +42,17 @@ wydf <- snoflow[which(snoflow$WY == WY),]
 wydf$swi <- wydf$melt+wydf$rain
 
 ```
+```{r}
+sholes <- which(is.na(snowflow$SWE))
+```
 
+
+
+```{r}
+plot(snowflo$SWE, type = 'l', ylab = 'SWE (mm)',
+     main = paste('SWE at', sitename))
+abline(v = sholes, col = 'red')
+```
 
 
 ```{r}

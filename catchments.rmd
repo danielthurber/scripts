@@ -15,24 +15,39 @@ catch.list <- as.character(vars.df$SITE_NO_tx)
 
 Add leading zeroes to 7-digit codes.
 ```{r}
-for (i in 1:67) {
+#no inputs necessary
+for (i in 1:length(catch.list)) {
   if (nchar(catch.list[i])<8){
     catch.list[i] <- paste0("0",catch.list[i])
   }
 }
+catch.list[65:68]
 ```
 
 Enter the feature ID of the catchment to analyze
 ```{r}
-FID <- 0
+FID <- 1
 x <- FID +1 #DF row for that catchment
 gage.code <- catch.list[x]
 paste(gage.code, vars.df$STANAME[x])
+vars.df$coName[x]
 Eraster <- paste0('E_',gage.code, '.tif')
 Araster <- paste0('A_',gage.code, '.tif')
 Hraster <- paste0('H_',gage.code, '.tif')
 ```
+(optional) Run this chunk if you need to add a common name for plots
+```{r}
+vars.df$coName[x] <- 'Rio Lucero'
+```
 
+User input - name and elevation of snotel site for plots
+```{r}
+catchment <- vars.df$coName[x]  #full river name to display in plots
+
+st1 <- 'Taos Powderhorn' #snotel station name for plots
+st1el <- 11057*.3048  #elevations in feet: multiply by 0.3048 ft/m
+
+```
 
 ```{r}
 DEM <- raster(paste0(rast.dir,'/',Eraster))
@@ -42,28 +57,37 @@ elevFreq <- freq(DEM)
 ```
 
 ```{r}
-dem.df <- as.data.frame(DEM)
-a.df <- as.data.frame(aspect)
-a.df$sin <- sin(a.df$A_08269000*pi/180)
-a.df$cos <- cos(a.df$A_08269000*pi/180)
+dem.df <- na.omit(as.data.frame(DEM))
+a.df <- na.omit(as.data.frame(aspect))
+a.df[(which(a.df[,1]==-1)),1] <- NA  #replace level pixels (A = -1) with NA
+a.df$sin <- sin(a.df[,1]*pi/180)
+a.df$cos <- cos(a.df[,1]*pi/180)
 
-hs.df <- as.data.frame(HillShade)
-```
-
-
-
-```{r}
-min(dem.df, na.rm = T)
+hs.df <- na.omit(as.data.frame(HillShade))
 ```
 
 ```{r}
-catchment <- 'LR @ Tony Grove'  #full river name to display in plots
-#GCS: 7705, KN: 7250, TF: 7406, USUDD: 8270, TGRS: 6332, TGL: 8474, FB: 8140
-st1 <- 'Klondike Narrows'
-st1el <- 7250*.3048  #elevations in feet: multiply by 0.3048 ft/m
-#st2 <- ''
-#st2el <- 7987*.3048
+sinMean <- mean(a.df$sin, na.rm = T)
+cosMean <- mean(a.df$cos, na.rm = T)
+aspMean <- atan(sinMean/cosMean)/pi*180
+if(sinMean<0 & cosMean>0){
+  aspMean <- aspMean+360}
+if(cosMean<0){
+  aspMean <- aspMean+180
+}
+paste('Mean aspect:',aspMean)
 ```
+
+
+```{r}
+hsMean <- mean(hs.df[,1], na.rm = T)
+paste('Mean hillshade:', hsMean)
+```
+```{r}
+elevMean <- mean(dem.df[,1], na.rm = T)
+paste('Mean elevation:', elevMean)
+```
+
 
 View the elevFreq dataframe.  If there are rows for zero or negative values, remove them.
 ```{r}
@@ -102,15 +126,9 @@ tail(truelev,3)
 HI <- sum(truelev$count*truelev$elevprop)/sum(truelev$count) #determines hypsometric integral
 medElev <- truelev$value[which(truelev$CDVal>0.5)[1]] #displays the median
 paste('Hypsometric Integral:', HI, '; median elevation (m):', medElev)
+paste('mean elevation:', elevMean)
 
 ```
-
-
-```{r}
-truelev$local11 <- c(NA,NA,NA,NA,NA,rollmean(truelev$count,11),NA,NA,NA,NA,NA)
-```
-
-
 
 ```{r}
 plot(truelev$CDVal~truelev$value, 
@@ -122,6 +140,23 @@ abline(v = st1el, col = 'darkolivegreen4')
 #abline(v = st2el, col = 'lightsalmon2')
 legend('bottomright', inset = .05, lty = 1, legend = c(st1), col = c('darkolivegreen4'), title = 'SnoTel Sites')
 ```
+```{r}
+snoelevCDF <- truelev$CDVal[which(truelev$value==round(st1el))]
+snoelevCDF
+```
+
+
+The next section generates a smoothed PDF plot of the elevation distribution
+
+---
+
+```{r}
+truelev$local11 <- c(NA,NA,NA,NA,NA,rollmean(truelev$count,11),NA,NA,NA,NA,NA)
+```
+
+
+
+
 
 ```{r}
 plot((truelev$count/sum(truelev$count))~truelev$value,
@@ -141,8 +176,37 @@ plot((truelev$local11/sum(truelev$count))~truelev$value,
      main = paste0('Relative Elevation Distribution for ', catchment),
      type = "l")
 abline(v = st1el, col = 'darkolivegreen4')
-abline(v = st2el, col = 'lightsalmon2')
-legend('topleft', inset = .05, lty = 1, legend = c(st1, st2), col = c('darkolivegreen4','lightsalmon2'), title = 'SnoTel Sites')
+#abline(v = st2el, col = 'lightsalmon2')
+legend('topleft', inset = .05, lty = 1, legend = c(st1), col = c('darkolivegreen4','lightsalmon2'), title = 'SnoTel Sites')
+
 ```
 
+---
+
+Make sure you are still looking at the right catchment and all catchment variables have been calculated:
+```{r}
+paste(gage.code, vars.df$coName[x])
+HI
+hsMean
+elevMean
+medElev
+aspMean
+snoelevCDF
+```
+
+
+```{r}
+vars.df$hypInt[x] <- HI
+vars.df$hsMean[x] <-hsMean
+vars.df$elevMean[x] <- elevMean
+vars.df$elevMed[x] <- medElev
+vars.df$aspMean[x] <- aspMean
+vars.df$snoelevCDF[x] <- snoelevCDF
+vars.df[seq(x-1,x+1),]
+```
+
+
+```{r}
+write.csv(vars.df, 'C:/Users/Daniel/Documents/Research/O2_variables.csv')
+```
 
