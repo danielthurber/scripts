@@ -20,7 +20,7 @@ rgbmat <- col2rgb(linecols)/255
 Read LRO aquatic and SNOTEL .csv files and generate dataframes
 ---
 ```{r}
-i <- 4
+i <- 1
 snofile <- 'TF_1013.csv'
 #FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 site <- sitecodes[i]               #enter site code for file upload and export
@@ -29,21 +29,22 @@ paste('Site:', sitecodes[i], '-', sitenames[i])
 linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
 #color vector gets used by other plotting scripts.  Attempt to maintain any changes made to the palette
 ```
-
+### Use the following section to evaluate correlation to snotel data
+---
 Begin by running SNOTEL and LRO_aquatic scripts to generate the qtc and snodf dataframes as .csv files.  This chunk will re-open them.
 
 ```{r}
+# reads in original QA/QC data without patches
+#creates the qtc dataframe
 qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
 snodf <- read.csv(paste0(mypath,snofile), stringsAsFactors = F)
 qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
 snodf$Date = as.Date(snodf$Date, format = '%Y-%m-%d')
 mindate <- qtc$date[1]
 ```
----
 
+Generate ACF functions over the entire period of record
 
-This section generates ACF functions over the entire period of record
----
 Calculate autocorrelation functions for each variable and compile in DF
 ```{r}
 lagmax <- 360
@@ -84,7 +85,7 @@ paste('Missing conductance:')
 which(is.na(wydf$conductance))
 nrow(wydf)
 ```
-
+show discharge during selected interval
 ```{r}
 plot(wydf$discharge[235:360], type = 'l')
 ```
@@ -109,7 +110,7 @@ cdates <- paste('C:',format(wydf$date[Cstart], '%m/%d'), 'through' ,format(wydf$
 paste(qdates,'    ', cdates)
 ```
 
-Create a plot for the particular water year.  Add any relevant notes about the timeframe over which this was evaluated
+Create an ACF plot for the particular water year.  Add any relevant notes about the timeframe over which this was evaluated.  Text indicates number of days until loss of correlation (0.2 threshold)
 ```{r}
 plot(wyacfdf$lag, wyacfdf$Qval, type = 'l', col='blue',
      ylab = 'Correlation', xlab = 'Lag', ylim = c(0,1),
@@ -131,7 +132,7 @@ text(x = 40, y = 0.4, labels = paste('SC:', which(wyacfdf$Cval<0.2)[1], 'days'))
 
 
 
-This section generates and plots CCF functions from SNOTEL data
+### This section generates and plots CCF functions from SNOTEL data over the entire period of record
 ---
 This chunk will compile the crossdf dataframe with columns for date, melt, rain, discharge, temp, and conductance
 ```{r}
@@ -155,7 +156,7 @@ Generate CCF objects for each relationship we are interested in:
 c_by_m <- ccf(crossdf$conductance,crossdf$melt, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_t <- ccf(crossdf$discharge,crossdf$temp, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_c <- ccf(crossdf$discharge,crossdf$conductance, lag.max = lagmax, plot = F, na.action = na.pass)
-q_by_m <- ccf(crossdf$discharge,crossdf$melt, lag.max = lagmax, plot = F)
+q_by_m <- ccf(crossdf$discharge,crossdf$melt, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_r <- ccf(crossdf$discharge,crossdf$rain, lag.max = lagmax, plot = F, na.action = na.pass)
 q_by_swi <- ccf(crossdf$discharge,crossdf$SWI, lag.max = lagmax, plot = F, na.action = na.pass)
 t_by_c <- ccf(crossdf$temp,crossdf$conductance, lag.max = lagmax, plot = F)
@@ -235,7 +236,7 @@ legend('topright', legend = c('Q acf', 'SC acf', 'Q | melt', 'C | melt'),
 
 
 
-This section generates and plots CCF functions from UEB model results, comparing across water years
+### This section generates and plots CCF functions from UEB model results, comparing across water years
 ---
 
 This chunk will read in the ***_mod.csv file 
