@@ -16,7 +16,7 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
                'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
                'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <-6
+i <-5
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
@@ -84,10 +84,10 @@ mod.df$WY = ifelse(as.numeric(format(mod.df$date,'%m'))>=10,
 ```
 
 ```{r}
-plot(mod.df$cpatch, type = 'l', col = 'red')
-lines(crossdf$cpatch)
+plot(mod.df$cpatch, type = 'l', col = 'red', xlim = c(0,))
+lines(qtc$cpatch)
 plot(mod.df$qpatch, type = 'l', col = 'red')
-lines(crossdf$qpatch)
+lines(qtc$qpatch)
 ```
 
 

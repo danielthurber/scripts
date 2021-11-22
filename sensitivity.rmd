@@ -19,7 +19,7 @@ rgbmat <- col2rgb(linecols)/255
 ```
 
 
-The following chunks explore the impact of anomalies within the original data on the ACF of 15-minute data
+### Explore the impact of anomalies within the original data on the ACF of 15-minute data
 ---
 
 Create the qdf, tdf, and cdf objects.  This chunk is from LRO_aquatic.rmd.  This will read in original QC data with 15-min intervals.
@@ -136,16 +136,175 @@ legend(155,1, legend = c('QC data', 'constant replacement', 'NA replacement', 'r
 
 
 
----
+
+### determine intervals for ACF plots for each water year
+Create the qtc object (daily timestep).  This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes. 
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/'  #leave this as directory
+
+i <- 4
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+
+qtc <- read.csv(paste0(mypath,site,'_patched.csv'), stringsAsFactors = F)
+
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+qtc$day <- format(as.Date(qtc$date),'%m-%d')
+qtc$wyday <- 0
+head(qtc,3)
+```
+
+Find holes in the time series
+```{r}
+qholes <- which(is.na(qtc$qpatch))
+qholes
+choles <- which(is.na(qtc$cpatch))
+choles
+```
+
+Populate water year day column with appropriate values 1-366
+```{r}
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+
+for (i in 1:nrow(qtc)){
+  qtc$wyday[i] <- wydates$wyday[which(wydates$day==qtc$day[i])]
+}
+
+qtc$WY = ifelse(as.numeric(format(qtc$date,'%m'))>=10, 
+                     as.numeric(format(qtc$date,'%Y'))+1, 
+                     as.numeric(format(qtc$date,'%Y'))) #determine water year
+```
+
+plot the discharge series and highlight all missing values.  Using the plot, iteratively focus on a study interval.
+```{r}
+study.int <- c(1400,1600) #select the study interval here
+date.mark <- '02-15' #vertical yellow lines will be drawn at this date for reference
+
+plot(qtc$cpatch, type = 'n', ylab = 'conductance'
+     ,xlab = paste('index:    ',qtc$date[study.int[1]],'to',qtc$date[study.int[2]],'highlighted')
+     )
+rect(study.int[1], 0, study.int[2], 400, col = 'deepskyblue')
+lines(qtc$cpatch)
+abline(v = choles, col = 'red')
+abline(v = study.int[1], lty = 4)
+abline(v = which(format(qtc$date,'%m-%d')==date.mark), col='goldenrod')
+
+plot(qtc$qpatch, type = 'n', ylab = 'discharge'
+     ,xlab = paste('index:    ',qtc$date[study.int[1]],'to',qtc$date[study.int[2]],'highlighted')
+     )
+rect(study.int[1], 0, study.int[2], 20, col = 'deepskyblue')
+lines(qtc$qpatch)
+abline(v = qholes, col = 'red')
+abline(v = which(format(qtc$date,'%m-%d')==date.mark), col='goldenrod')
+```
+Select a specific study interval targeting one runoff season from plot above.  This will isolate a water year and plot discharge. 
+```{r}
+study.int <- c(1650,1855) #redefine the study interval, or do so by re-running the chunk above
+a <- study.int[1]  #index of starting time
+b <- study.int[2]   #index of ending time based on study interval
 
 
-Below, we look at aggregated daily average values of discharge, conductance, and temperature and the effects of specific windows within the water year on the ACF
+yrange <- c(0,max(qtc$qpatch[study.int[1]:study.int[2]], na.rm = T))
+
+plot(qtc$qpatch, xlim = study.int, ylim = yrange, type = 'l', ylab = 'discharge', 
+     main = paste('discharge at', sitename, qtc$WY[a], '-', qtc$WY[b-60])
+     ,xlab = paste('index:    ',format(qtc$date[study.int[1]],'%m-%d'),'to',format(qtc$date[study.int[2]],'%m-%d'))
+     )
+abline(v = qholes, col = 'red')
+abline(v = choles, col = 'maroon')
+```
+
+```{r}
+win1 <- c(a,b-50)  #red rect
+win2 <- c(a+10,b-30)  #yellow rect
+win3 <- c(a+20,b-10)  #green rect
+win4 <- c(a+40,b)   #gray rect
+win5 <- c(a,b)    #blue rect
+
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(qtc$qpatch, xlim = study.int, ylim = yrange, type = 'l', ylab = 'discharge', 
+     main = paste('discharge at', sitename, qtc$WY[a], '-', qtc$WY[b-60]), xaxt = 'n',
+     xlab = 'Date')
+
+#highlight ranges for each window of CCF analysis
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,1],rgbmat[2,1],rgbmat[3,1], alpha = 0.5))
+rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,2],rgbmat[2,2],rgbmat[3,2], alpha = 0.5))
+rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,3],rgbmat[2,3],rgbmat[3,3], alpha = 0.5))
+rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2], border = NA,  
+     col = rgb(rgbmat[1,4],rgbmat[2,4],rgbmat[3,4], alpha = 0.5))
+rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  border = NA, 
+     col = rgb(rgbmat[1,5],rgbmat[2,5],rgbmat[3,5], alpha = 0.5))
+
+#
+
+axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6)]))
+
+```
+Name each window for the legend on the ACF plot, in order from bottom to top with the window highlight rectangles shown above 
+```{r}
+#automatically enters date ranges to the legend for each window
+win.names <- c(paste(qtc$day[win1[1]], 'to', qtc$day[win1[2]]),
+               paste(qtc$day[win2[1]], 'to', qtc$day[win2[2]]), 
+               paste(qtc$day[win3[1]], 'to', qtc$day[win3[2]]),
+               paste(qtc$day[win4[1]], 'to', qtc$day[win4[2]]),
+               paste(qtc$day[win5[1]], 'to', qtc$day[win5[2]]))
+
+
+#win.names <- c('3/5-8/12','4/4-10/11','4/4-8/12','3/5-10/11','4/4-11/10')
+```
+
+Compute ACF of Q  within each window.
+```{r}
+lagmax <- 150
+acf1 <- acf(qtc$qpatch[win1[1]:win1[2]],  lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+acf2 <- acf(qtc$qpatch[win2[1]:win2[2]],  lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+acf3 <- acf(qtc$qpatch[win3[1]:win3[2]],  lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+acf4 <- acf(qtc$qpatch[win4[1]:win4[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+acf5 <- acf(qtc$qpatch[win5[1]:win5[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+
+```
+
+
+Plot ACF curves for each window
+```{r}
+plot(acf1$lag, acf1$acf, type = 'l', col=linecols[1],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,1.05), xlim = c(0,50), 
+     main = paste('Q|SWIT Crosscorrelation window sensitivity:', sitename, qtc$WY[a]))
+lines(acf2$acf, col = linecols[2],xlim = c(0,lagmax))
+lines(acf3$acf, col = linecols[3],xlim = c(0,lagmax))
+lines(acf4$acf, col = linecols[4],xlim = c(0,lagmax))
+lines(acf5$acf, col = linecols[5],xlim = c(0,lagmax))
+
+abline(h = 0.2, lty = 3)
+abline(h = -0.2, lty = 3)
+
+legend('bottomleft', legend = win.names, lty = 1, col = linecols[1:5]) 
+```
+Based on these results, select the window with the longest timeframe that does not represent an anomaly from the cluster of lines.  Record this window in the processing parameters/outcomes google doc (indices can be referenced by (win3) in the console).
+
+Return to the top of the section and shift the study interval to a new water year
+
+
+### Below, we look at aggregated daily average values of discharge, conductance, and temperature and the effects of patching and specific windows within the water year on the ACF
 ---
 Create the qtc object (daily timestep).  This chunk is from other analysis scripts.  It will read in aggregated daily average dataframes. 
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
 
-i <- 1
+i <- 3
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -282,10 +441,9 @@ abline(h = 0.2, lty = 3)
 legend('topright', legend = c('QC data', 'patched data'), lty = c(1,2))
 ```
 
----
 
 
-This section looks at variability in CCF results based on windowing and SNOTEL station selection.  It requires running the "correlograms" script far enough to create the "crossdf" object.  The section on ACF generation can be skipped over.
+### This section looks at variability in CCF results based on windowing and SNOTEL station selection.  It requires running the "correlograms" script far enough to create the "crossdf" object.  The section on ACF generation can be skipped over.
 
 ---
 ```{r}
@@ -366,14 +524,16 @@ axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6
 
 
 
-UEB model cross correlegrams sensitivity.  Run "patching.rmd" and "UEB_integration.rmd" first.
----
+
+
+### UEB model CCF sensitivity.  Run "patching.rmd" and "UEB_integration.rmd" first.
+
 This chunk will read in the ***_mod.csv file 
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
 
 #sitenames are 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 6:Ricks Spring)
-i <- 4
+i <- 5
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]
@@ -402,9 +562,9 @@ abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='cadetblue')
 which(crossdf$day == date.mark)
 ```
 
-Select a specific study interval
+Select a specific study interval targeting one runoff season from plot above.  This will isolate a water year and plot SWIT and discharge together
 ```{r}
-study.int <- c(550,760)
+study.int <- c(900,1140)
 a <- study.int[1]  #index of starting time
 b <- study.int[2]   #index of ending time based on study interval
 
@@ -418,37 +578,7 @@ plot(crossdf$qpatch, xlim = study.int, ylim = yrange, type = 'l', ylab = 'discha
      main = paste('discharge at', sitename, crossdf$WY[a], '-', crossdf$WY[b-60])
      )
 abline(v = qholes, col = 'red')
-abline(v = 550, col = 'green')
-```
-
-```{r}
-which(crossdf$wyday==1)
-```
-This plot will be useful for determining a window over which to characterize the CCF for a give water year
-```{r}
-a <- 210
-b <- 450
-
-win1 <- c(a+20,b-20)  #red rect
-    #blue rect
-
-barplot(crossdf$SWIT[study.int[1]:study.int[2]], axes = F)
-axis(side = 4, at = pretty(range(crossdf$SWIT[a:b]), n = 2))
-
-par(new=T)
-#plot discharge over the window.  The line gets plotted later over the highlight rectangles
-plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
-     main = paste('discharge at', sitename,crossdf$WY[a]), xaxt = 'n', xlab = 'date'
-     )
-
-#highlight ranges for each window of CCF analysis
-rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2], border = NA,  
-     col = rgb(rgbmat[1,1],rgbmat[2,1],rgbmat[3,1], alpha = 0.5))
-
-
-lines(crossdf$qpatch, type = 'l')
-axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
-
+abline(v = 530, col = 'green')
 ```
 
 
@@ -458,11 +588,11 @@ b <- study.int[2]   #index of ending time based on study interval
 
 
 
-win1 <- c(a,a+180)  #red rect
-win2 <- c(a+0,a+195)  #yellow rect
-win3 <- c(a+0,a+210)  #green rect
-win4 <- c(a+0,a+220)   #gray rect
-win5 <- c(a,a+230)    #blue rect
+win1 <- c(a,b-50)  #red rect
+win2 <- c(a+0,b-30)  #yellow rect
+win3 <- c(a+20,b-10)  #green rect
+win4 <- c(a+40,b)   #gray rect
+win5 <- c(a,b)    #blue rect
 
 barplot(crossdf$SWIT[a:b], axes = F)
 axis(side = 4, at = pretty(range(crossdf$SWIT[a:b]), n = 2))
@@ -492,9 +622,6 @@ axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out
 
 ```
 
-
-
-
 Name each window for the legend on the CCF plot, in order from bottom to top with the window highlight rectangles shown above 
 ```{r}
 #automatically enters date ranges to the legend for each window
@@ -511,7 +638,7 @@ win.names <- c(paste(crossdf$day[win1[1]], 'to', crossdf$day[win1[2]]),
 
 Compute CCF of Q | SWIT within each window.
 ```{r}
-lagmax <- 200
+lagmax <- 150
 ccf1 <- ccf(crossdf$qpatch[win1[1]:win1[2]], crossdf$SWIT[win1[1]:win1[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
 ccf2 <- ccf(crossdf$qpatch[win2[1]:win2[2]], crossdf$SWIT[win2[1]:win2[2]], lag.max = lagmax, 
@@ -525,14 +652,16 @@ ccf5 <- ccf(crossdf$qpatch[win5[1]:win5[2]], crossdf$SWIT[win5[1]:win5[2]], lag.
 
 ```
 
+
+
 ```{r}
 plot(ccf1$lag, ccf1$acf, type = 'l', col=linecols[1],
      ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.9), xlim = c(0,50), 
      main = paste('Q|SWIT Crosscorrelation window sensitivity:', sitename, crossdf$WY[a]))
 lines(ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
 lines(ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
-lines(ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
-lines(ccf5$acf[(lagmax+2):(lagmax*2+1)], col = linecols[5])
+lines(ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4],xlim = c(0,lagmax))
+lines(ccf5$acf[(lagmax+2):(lagmax*2+1)], col = linecols[5],xlim = c(0,lagmax))
 
 abline(h = 0.2, lty = 3)
 abline(h = -0.2, lty = 3)

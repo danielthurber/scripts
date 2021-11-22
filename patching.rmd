@@ -12,7 +12,7 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
                'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
                'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <- 7
+i <- 2
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
@@ -77,7 +77,7 @@ choles <- which(is.na(crossdf$cpatch))
 paste('discharge:') 
 qholes
 paste('conductance:')
-#choles
+choles
 
 ```
 
@@ -126,7 +126,7 @@ Zoom in on a section of the conductance plot worth patching
 
 
 ```{r}
-patch.int <- c(2130, 2185)
+patch.int <- c(1725, 1735)
 
 #patch.rng <- range(crossdf$cpatch[patch.int[1]:patch.int[2]], na.rm = T)
 #choles
