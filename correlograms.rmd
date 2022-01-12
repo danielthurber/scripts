@@ -251,7 +251,7 @@ mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as 
 #sitenames- 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 
 #6:Ricks Spring, 7:Sawmill, 8:Spawn, 9:Wood Camp, 10:Guinavah)
 
-i <- 2
+i <- 5
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]
@@ -272,27 +272,54 @@ choles <- which(is.na(crossdf$cpatch))
 
 plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
 abline(v = choles, col = 'red')
+abline(v = which(is.na(crossdf$conductance)), col = 'darkseagreen3')
 abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
 
 plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
 abline(v = which(is.na(crossdf$discharge)), col = 'darkseagreen3')
 abline(v = qholes, col = 'red')
-#abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
+abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
+
+```
+```{r}
+which(format(crossdf$date,'%m-%d')=='08-15')
+which(format(crossdf$date,'%m-%d')=='02-15')
 
 ```
 
 
 Enter the window boundaries for the CCF analysis within each year.  These boundaries should be determined through the sensitivity.rmd script.  Win1 values absolutely must be populated with a minimum of 150 day interval, even if 2015 is not being evaluated.  For plotting purposes later.
 ```{r}
-study.int <- c(200,1570)
+study.int <- c(50,1350)
 a <- study.int[1]  #index of starting time
 b <- study.int[2]   #index of ending time based on study interval
 
 
-win1 <- c(230,450)  #red rect for 2015
-win2 <- c(620,820)  #yellow rect for 2016
-win3 <- c(960,1175)  #green rect for 2017
-win4 <- c(1350,1550)   #gray rect for 2018
+win1 <- c(0,1)  #red rect for 2015
+win2 <- c(0,158)  #yellow rect for 2016
+win3 <- c(364,542)  #green rect for 2017
+win4 <- c(729,913)   #gray rect for 2018
+
+yrange <- c(0,max(crossdf$cpatch[study.int[1]:study.int[2]], na.rm = T))
+
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(crossdf$cpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
+     main = paste('conductance at', sitename,crossdf$WY[a], '-', crossdf$WY[b-40]), xaxt = 'n', xlab = 'date'
+     )
+
+#highlight ranges for each window of CCF analysis
+rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=yrange[2], border = NA,  
+     col = rgb(rgbmat[1,1],rgbmat[2,1],rgbmat[3,1], alpha = 0.5))
+rect(xleft=win2[1], xright=win2[2], ybottom = 0, ytop=yrange[2], border = NA,  
+     col = rgb(rgbmat[1,2],rgbmat[2,2],rgbmat[3,2], alpha = 0.5))
+rect(xleft=win3[1], xright=win3[2], ybottom = 0, ytop=yrange[2], border = NA,  
+    col = rgb(rgbmat[1,3],rgbmat[2,3],rgbmat[3,3], alpha = 0.5))
+rect(xleft=win4[1], xright=win4[2], ybottom = 0, ytop=yrange[2], border = NA,  
+     col = rgb(rgbmat[1,4],rgbmat[2,4],rgbmat[3,4], alpha = 0.5))
+
+
+lines(crossdf$cpatch, type = 'l')
+axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
 
 yrange <- c(0,max(crossdf$qpatch[study.int[1]:study.int[2]], na.rm = T))
 #plot discharge over the window.  The line gets plotted later over the highlight rectangles
@@ -321,12 +348,11 @@ axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out
 
 Name each window for the legend on the CCF plot, in order from bottom to top with the window highlight rectangles shown above 
 ```{r}
-years <- c(1,2,3,4)
 #automatically enters date ranges to the legend for each window
-win.names <- c(paste(crossdf$WY[win1[1]]),
-               paste(crossdf$WY[win2[1]]), 
-               paste(crossdf$WY[win3[1]]),
-               paste(crossdf$WY[win4[1]]))
+win.names <- c(paste(crossdf$WY[win1[2]]),
+               paste(crossdf$WY[win2[2]]), 
+               paste(crossdf$WY[win3[2]]),
+               paste(crossdf$WY[win4[2]]))
 
 
 #win.names <- c('3/5-8/12','4/4-10/11','4/4-8/12','3/5-10/11','4/4-11/10')
@@ -349,10 +375,11 @@ ccf4 <- ccf(crossdf$qpatch[win4[1]:win4[2]], crossdf$SWIT[win4[1]:win4[2]], lag.
 ```
 
 ```{r}
+years <- c(2,3,4)
 plot(ccf1$lag, ccf1$acf, col=linecols[1],
      ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.9), xlim = c(0,50), 
      main = paste('Q|SWIT Crosscorrelation by water year:', sitename),
-     type = 'l', #change to 'n' to hide, 'l' to show
+     type = 'n', #change to 'n' to hide, 'l' to show
      )
 lines(ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
 lines(ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
@@ -385,7 +412,7 @@ paste(win.names[4]  ,which(abs(ccf4$acf[(lagmax+2):(lagmax+100)])<0.2)[1]-1)
 
 #If years are absent, manage that by commenting out operations later
 acf.years <- c('15','16','17','18','19','20','21') #leave this alone  
-acf.season <- '_F' #_F, _W, _B - set season code (runoff, wet, baseflow)
+acf.season <- '_B' #_F, _W, _B - set season code (runoff, wet, baseflow)
 acf.variable <- '_Q' #_Q, _C - set discharge/conductance variable
 acf.function <- "_C" #_A, _C, _S - set ACF, CCF(UEB), or CCF(SNOTEL) function
 acf.codes <- paste0(acf.site, acf.years, acf.season, acf.variable, acf.function)
@@ -394,10 +421,10 @@ acf.codes
 
 
 ```{r}
-acf.df <- data.frame(lag = ccf1$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
+acf.df <- data.frame(lag = ccf2$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
 #add columns for each 
-acf.df[acf.codes[1]] <- ccf1$acf #2015
-acf.df[acf.codes[2]] <- ccf2$acf #2016
+#acf.df[acf.codes[1]] <- ccf1$acf #2015
+acf.df[acf.codes[2]] <-  ccf2$acf #2016
 acf.df[acf.codes[3]] <- ccf3$acf #2017
 acf.df[acf.codes[4]] <- ccf4$acf #2018
 #acf.df[acf.codes[5]] <- ccf5$acf #2019
@@ -415,6 +442,7 @@ Add all new columns to the correlations dataframe
 paste('before:', ncol(corr.df))
 corr.df <- merge(corr.df, acf.df, by = 'lag', all = T)
 paste('after:', ncol(corr.df))
+acf.df <- NULL
 ```
 
 save the updated correlations dataframe
@@ -442,11 +470,11 @@ ccf4 <- ccf(crossdf$cpatch[win4[1]:win4[2]], crossdf$SWIT[win4[1]:win4[2]], lag.
 plot(ccf1$lag, -ccf1$acf, col=linecols[1],
      ylab = 'Correlation (negative)', xlab = 'Lag (days)', ylim = c(-0.2,0.9), xlim = c(0,50), 
      main = paste('SC|SWIT Crosscorrelation by water year at', sitename),
-          type = 'l', #change to 'n' to hide, 'l' to show
+          type = 'n', #change to 'n' to hide, 'l' to show
 )
-lines(-ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
-lines(-ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
-lines(-ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
+lines(-ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax)) #2016
+lines(-ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax)) #2017
+lines(-ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4]) #2018
 
 abline(h = 0.2, lty = 3)
 abline(h = -0.2, lty = 3)
@@ -476,7 +504,7 @@ paste(win.names[4]  ,which(abs(ccf4$acf[(lagmax+2):(lagmax+50)])<0.2)[1]-1)
 
 #If years are absent, manage that by commenting out operations later
 acf.years <- c('15','16','17','18','19','20','21') #leave this alone  
-acf.season <- '_F' #_F, _W, _B - set season code
+acf.season <- '_B' #_F, _W, _B - set season code
 acf.variable <- '_C' #_Q, _C - set discharge/conductance variable
 acf.function <- "_C" #_A, _C, _S - set ACF, CCF(UEB), or CCF(SNOTEL) function
 acf.codes <- paste0(acf.site, acf.years, acf.season, acf.variable, acf.function)
@@ -485,9 +513,10 @@ acf.codes
 
 
 ```{r}
-acf.df <- data.frame(lag = ccf1$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
+acf.df <- data.frame(lag = ccf2$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
+
 #add columns for each 
-acf.df[acf.codes[1]] <- ccf1$acf #2015
+#acf.df[acf.codes[1]] <- ccf1$acf #2015
 acf.df[acf.codes[2]] <- ccf2$acf #2016
 acf.df[acf.codes[3]] <- ccf3$acf #2017
 acf.df[acf.codes[4]] <- ccf4$acf #2018
@@ -507,6 +536,7 @@ Before running this chunk, notice the number of variables in the corr.df datafra
 paste('before:', ncol(corr.df))
 corr.df <- merge(corr.df, acf.df, by = 'lag', all = T)
 paste('after:', ncol(corr.df))
+acf.df <- NULL
 ```
 
 save the updated correlations dataframe
@@ -524,7 +554,8 @@ mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/'  #l
 #sitenames- 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 
 #6:Ricks Spring, 7:Sawmill, 8:Spawn, 9:Wood Camp, 10:Guinavah)
 
-i <- 1
+#i can be leftover from analyses above if the site doesn't change
+i <- 10
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]
@@ -557,9 +588,9 @@ date.mark <- '02-15' #vertical blue lines will be drawn at this date for referen
 qholes <- which(is.na(crossdf$qpatch))
 choles <- which(is.na(crossdf$cpatch))
 
-plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
-abline(v = choles, col = 'red')
-abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
+#plot(crossdf$cpatch, type = 'l', ylab = 'conductance', main = paste('Patched Conductance at', sitename))
+#abline(v = choles, col = 'red')
+#abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
 
 plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Patched discharge at', sitename))
 abline(v = which(is.na(crossdf$discharge)), col = 'darkseagreen3')
@@ -567,22 +598,27 @@ abline(v = qholes, col = 'red')
 abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
 
 ```
+```{r}
+crossdf$date[1]
+which(format(crossdf$date,'%m-%d')=='03-20')
+which(format(crossdf$date,'%m-%d')=='09-15')
+```
 
 
 Enter the window boundaries for the CCF analysis within each year.  These boundaries should be determined through the sensitivity.rmd script.  Win1 values absolutely must be populated with a minimum of 150 day interval, even if 2015 is not being evaluated.  For plotting purposes later.
 ```{r}
-study.int <- c(210,2290)
+study.int <- c(1,900)
 a <- study.int[1]  #index of starting time
 b <- study.int[2]   #index of ending time based on study interval
 
-
-win1 <- c(230,450)  #red rect for 2015
-win2 <- c(620,820)  #yellow rect for 2016
-win3 <- c(960,1175)  #green rect for 2017
-win4 <- c(1350,1550)   #gray rect for 2018
-win5 <- c(1700,1920)   #blue rect for 2019
-win6 <- c(2080,2290)   #brown rect for 2020
-#win7 <- c(2000,2020) #2021
+#win1-win4 may be held over from CCF analysis above
+win1 <- c(0,1)  #red rect for 2015
+win2 <- c(0,1)  #yellow rect for 2016
+win3 <- c(0,1)  #green rect for 2017
+win4 <- c(0,1)   #gray rect for 2018
+win5 <- c(294,473)   #blue rect for 2019
+win6 <- c(660,839)   #brown rect for 2020
+win7 <- c(0,1) #2021
 
 #plot Conductance
 yrange <- range(crossdf$cpatch, na.rm = T)
@@ -603,9 +639,12 @@ rect(xleft=win5[1], xright=win5[2], ybottom = 0, ytop=yrange[2], border = NA,
      col = rgb(rgbmat[1,5],rgbmat[2,5],rgbmat[3,5], alpha = 0.5))
 rect(xleft=win6[1], xright=win6[2], ybottom = 0, ytop=yrange[2], border = NA,  
      col = rgb(rgbmat[1,6],rgbmat[2,6],rgbmat[3,6], alpha = 0.5))
+rect(xleft=win7[1], xright=win7[2], ybottom = 0, ytop=yrange[2], border = NA,  
+     col = rgb(rgbmat[1,7],rgbmat[2,7],rgbmat[3,7], alpha = 0.5))
 
 lines(crossdf$cpatch, type = 'l')
 axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
+abline(v = which(is.na(crossdf$conductance)), col = 'darkseagreen3')
 abline(v = choles, col = 'red')
 
 
@@ -615,6 +654,7 @@ yrange <- range(crossdf$qpatch, na.rm = T)
 plot(crossdf$qpatch, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
      main = paste('discharge at', sitename,crossdf$WY[a], '-', crossdf$WY[b-40]), xaxt = 'n', xlab = 'date'
      )
+abline(v = which(is.na(crossdf$discharge)), col = 'darkseagreen3')
 
 #highlight ranges for each window of ACF analysis
 rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=yrange[2], border = NA,  
@@ -629,6 +669,8 @@ rect(xleft=win5[1], xright=win5[2], ybottom = 0, ytop=yrange[2], border = NA,
      col = rgb(rgbmat[1,5],rgbmat[2,5],rgbmat[3,5], alpha = 0.5))
 rect(xleft=win6[1], xright=win6[2], ybottom = 0, ytop=yrange[2], border = NA,  
      col = rgb(rgbmat[1,6],rgbmat[2,6],rgbmat[3,6], alpha = 0.5))
+rect(xleft=win7[1], xright=win7[2], ybottom = 0, ytop=yrange[2], border = NA,  
+     col = rgb(rgbmat[1,7],rgbmat[2,7],rgbmat[3,7], alpha = 0.5))
 
 lines(crossdf$qpatch, type = 'l')
 axis(1, at = seq(a,b, length.out = 6), labels = (crossdf$date[seq(a,b,length.out = 6)]))
@@ -642,12 +684,13 @@ abline(v = qholes, col = 'red')
 Name each window for the legend on the CCF plot, in order from bottom to top with the window highlight rectangles shown above 
 ```{r}
 #automatically enters water year to the legend for each window
-win.names <- c(paste(crossdf$WY[win1[1]]),
-               paste(crossdf$WY[win2[1]]), 
-               paste(crossdf$WY[win3[1]]),
-               paste(crossdf$WY[win4[1]]),
-               paste(crossdf$WY[win5[1]]),
-               paste(crossdf$WY[win6[1]]))
+win.names <- c(paste(crossdf$WY[win1[2]]),
+               paste(crossdf$WY[win2[2]]), 
+               paste(crossdf$WY[win3[2]]),
+               paste(crossdf$WY[win4[2]]),
+               paste(crossdf$WY[win5[2]]),
+               paste(crossdf$WY[win6[2]]),
+               paste(crossdf$WY[win7[2]]))
 
 
 #win.names <- c('3/5-8/12','4/4-10/11','4/4-8/12','3/5-10/11','4/4-11/10')
@@ -669,30 +712,36 @@ acf5 <- acf(crossdf$qpatch[win5[1]:win5[2]], lag.max = lagmax,
              plot = F, na.action = na.pass)
 acf6 <- acf(crossdf$qpatch[win6[1]:win6[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
+acf7 <- acf(crossdf$qpatch[win7[1]:win7[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
 ```
 
 ```{r}
+years <- c(5,6)
 plot(acf1$lag, acf1$acf, col=linecols[1],
-     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0.1,1), xlim = c(0,50), 
-     main = paste('Q auto-correlation by water year:', sitename),
-     type = 'l', #change to 'n' to hide, 'l' to show
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.1,1), xlim = c(0,50), 
+#     main = paste('Q auto-correlation by water year:', sitename),
+     main = paste('Q auto-correlation by water year:',sitename),
+     type = 'n', #change to 'n' to hide, 'l' to show
      )
-lines(acf2$acf, col = linecols[2],xlim = c(0,lagmax))
-lines(acf3$acf, col = linecols[3],xlim = c(0,lagmax))
-lines(acf4$acf, col = linecols[4])
+#lines(acf2$acf, col = linecols[2],xlim = c(0,lagmax))
+#lines(acf3$acf, col = linecols[3],xlim = c(0,lagmax))
+#lines(acf4$acf, col = linecols[4])
 lines(acf5$acf, col = linecols[5])
 lines(acf6$acf, col = linecols[6])
+#lines(acf7$acf, col = linecols[7])
+
 
 abline(h = 0.2, lty = 3)
 abline(h = -0.2, lty = 3)
 
-legend('bottomleft', legend = win.names[c(1,2,3,4,5,6)], lty = 1, col = linecols[c(1,2,3,4,5,6)]) 
+legend('topright', legend = win.names[years], lty = 1, col = linecols[years]) 
 ```
 
 
 ```{r}
 
-paste("days of correlation:")
+paste0("days of Q correlation at ",sitename,":")
 paste(win.names[1]  ,which(abs(acf1$acf)<0.2)[1]-1)
 paste(win.names[2]  ,which(abs(acf2$acf)<0.2)[1]-1)
 paste(win.names[3]  ,which(abs(acf3$acf)<0.2)[1]-1)
@@ -702,7 +751,7 @@ paste(win.names[6]  ,which(abs(acf6$acf)<0.2)[1]-1)
 
 ```
 ```{r}
-acf.site <- 'FB_' #FB_, TG_, BC_, TF_, RH_, RS_, TS_, SC_, WC_, GC_, SS_, SD_
+#acf.site <- 'FB_' #FB_, TG_, BC_, TF_, RH_, RS_, TS_, SC_, WC_, GC_, SS_, SD_
 
 #acf site should be pre-set.  If not, fix it with this line:
 #acf.site <- 'FB_' #FB_, TG_, BC_, TF_, RH_, RS_, TS_, SC_, WC_, GC_, SS_, SD_
@@ -718,15 +767,17 @@ acf.codes
 
 
 ```{r}
-acf.df <- data.frame(lag = acf1$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
+acf.df <- data.frame(lag = acf5$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
 #add columns for each 
-acf.df[acf.codes[1]] <- acf1$acf #2015
-acf.df[acf.codes[2]] <- acf2$acf #2016
-acf.df[acf.codes[3]] <- acf3$acf #2017
-acf.df[acf.codes[4]] <- acf4$acf #2018
+#acf.df[acf.codes[1]] <- acf1$acf #2015
+#acf.df[acf.codes[2]] <- acf2$acf #2016
+#acf.df[acf.codes[3]] <- acf3$acf #2017
+#acf.df[acf.codes[4]] <- acf4$acf #2018
 acf.df[acf.codes[5]] <- acf5$acf #2019
 acf.df[acf.codes[6]] <- acf6$acf #2020
-#acf.df[acf.codes[7]] <- acf7$acf #2021
+#acf.df[acf.codes[7]] <- c(acf7$acf,rep(NA, times = nrow(acf.df)-length(acf7$acf))) #2021
+
+# to pad the length of an acf vector: c(acf7$acf,rep(NA, times = nrow(acf.df)-length(acf7$acf)))
 
 #restrict dataframe to lags within a specific range
 acf.df <- acf.df[which(acf.df$lag<=100 & acf.df$lag >= 0),]
@@ -738,7 +789,8 @@ Add all new columns to the correlations dataframe
 ```{r}
 paste('before:', ncol(corr.df))
 corr.df <- merge(corr.df, acf.df, by = 'lag', all = T)
-paste('after:', ncol(corr.df))
+paste('after:', ncol(corr.df), 'columns')
+acf.df <- NULL
 ```
 
 save the updated correlations dataframe
@@ -761,6 +813,8 @@ acf5 <- acf(crossdf$cpatch[win5[1]:win5[2]], lag.max = lagmax,
              plot = F, na.action = na.pass)
 acf6 <- acf(crossdf$cpatch[win6[1]:win6[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
+acf7 <- acf(crossdf$cpatch[win7[1]:win7[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
 ```
 
 
@@ -768,23 +822,24 @@ acf6 <- acf(crossdf$cpatch[win6[1]:win6[2]], lag.max = lagmax,
 plot(acf1$lag, acf1$acf, col=linecols[1],
      ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0.1,1), xlim = c(0,50), 
      main = paste('SC auto-correlation by water year:', sitename),
-     type = 'l', #change to 'n' to hide, 'l' to show
+     type = 'n', #change to 'n' to hide, 'l' to show
      )
-lines(acf2$acf, col = linecols[2],xlim = c(0,lagmax))
-lines(acf3$acf, col = linecols[3],xlim = c(0,lagmax))
-lines(acf4$acf, col = linecols[4])
+#lines(acf2$acf, col = linecols[2],xlim = c(0,lagmax))
+#lines(acf3$acf, col = linecols[3],xlim = c(0,lagmax))
+#lines(acf4$acf, col = linecols[4])
 lines(acf5$acf, col = linecols[5])
-#lines(acf6$acf, col = linecols[6])
+lines(acf6$acf, col = linecols[6])
+#lines(acf7$acf, col = linecols[7])
 
 abline(h = 0.2, lty = 3)
 
-legend('bottomleft', legend = win.names[c(1,2,3,4,5)], lty = 1, col = linecols[c(1,2,3,4,5)]) 
+legend('topright', legend = win.names[years], lty = 1, col = linecols[years]) 
 ```
 
 
 ```{r}
 
-paste("days of correlation:")
+paste0("days of SC correlation at ", sitename, ":")
 paste(win.names[1]  ,which(abs(acf1$acf)<0.2)[1]-1)
 paste(win.names[2]  ,which(abs(acf2$acf)<0.2)[1]-1)
 paste(win.names[3]  ,which(abs(acf3$acf)<0.2)[1]-1)
@@ -809,15 +864,15 @@ acf.codes
 
 
 ```{r}
-acf.df <- data.frame(lag = acf1$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
+acf.df <- data.frame(lag = acf5$lag) #create dataframe with lag times.  lagtimes for all acf functions must coincide
 #add columns for each 
-acf.df[acf.codes[1]] <- acf1$acf #2015
-acf.df[acf.codes[2]] <- acf2$acf #2016
-acf.df[acf.codes[3]] <- acf3$acf #2017
-acf.df[acf.codes[4]] <- acf4$acf #2018
+#acf.df[acf.codes[1]] <- acf1$acf #2015
+#acf.df[acf.codes[2]] <- acf2$acf #2016
+#acf.df[acf.codes[3]] <- acf3$acf #2017
+#acf.df[acf.codes[4]] <- acf4$acf #2018
 acf.df[acf.codes[5]] <- acf5$acf #2019
 acf.df[acf.codes[6]] <- acf6$acf #2020
-#acf.df[acf.codes[7]] <- acf7$acf #2021
+#acf.df[acf.codes[7]] <- c(acf7$acf,rep(NA, times = nrow(acf.df)-length(acf7$acf))) #2021
 
 #restrict dataframe to lags within a specific range
 acf.df <- acf.df[which(acf.df$lag<=100 & acf.df$lag >= 0),]
@@ -830,6 +885,7 @@ Add all new columns to the correlations dataframe
 paste("before:", ncol(corr.df))
 corr.df <- merge(corr.df, acf.df, by = 'lag', all = T)
 paste('after:', ncol(corr.df))
+acf.df <- NULL
 ```
 
 save the updated correlations dataframe
@@ -840,24 +896,18 @@ write.csv(corr.df, 'C:/Users/Daniel/Documents/Research/data/dataframes/correlogr
 
 ### This section compares CCF functions from different catchments within a water year(unfinished)
 ---
-This chunk will read in the ***_mod.csv file 
-```{r}
-correlations$Qswit_FB_15
-```
-
+This chunk will read in the correlograms.csv file 
 
 ```{r}
-
-correlations <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/correlations.csv'))
-
+correlations <- read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/correlograms.csv')
 head(correlations,3)
-
 ```
-
-
 ```{r}
-write.csv(mod.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/correlations.csv'), row.names = F)
+
 ```
+
+
+
 Plot conductance and discharge with data holes highlighted with blue lines on a user-decided date
 ```{r}
 date.mark <- '02-15' #vertical blue lines will be drawn at this date for reference (mm-dd format)

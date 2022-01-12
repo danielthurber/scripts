@@ -142,7 +142,7 @@ Create the qtc object (daily timestep).  This chunk is from other analysis scrip
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/'  #leave this as directory
 
-i <- 4
+i <- 5
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -182,7 +182,7 @@ qtc$WY = ifelse(as.numeric(format(qtc$date,'%m'))>=10,
 plot the discharge series and highlight all missing values.  Using the plot, iteratively focus on a study interval.
 ```{r}
 study.int <- c(1400,1600) #select the study interval here
-date.mark <- '02-15' #vertical yellow lines will be drawn at this date for reference
+date.mark <- '10-30' #vertical yellow lines will be drawn at this date for reference
 
 plot(qtc$cpatch, type = 'n', ylab = 'conductance'
      ,xlab = paste('index:    ',qtc$date[study.int[1]],'to',qtc$date[study.int[2]],'highlighted')
@@ -203,7 +203,7 @@ abline(v = which(format(qtc$date,'%m-%d')==date.mark), col='goldenrod')
 ```
 Select a specific study interval targeting one runoff season from plot above.  This will isolate a water year and plot discharge. 
 ```{r}
-study.int <- c(1650,1855) #redefine the study interval, or do so by re-running the chunk above
+study.int <- c(1630,1860) #redefine the study interval, or do so by re-running the chunk above
 a <- study.int[1]  #index of starting time
 b <- study.int[2]   #index of ending time based on study interval
 
@@ -304,7 +304,7 @@ Create the qtc object (daily timestep).  This chunk is from other analysis scrip
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
 
-i <- 3
+i <- 4
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -327,7 +327,7 @@ qholes
 
 plot the discharge series and highlight all missing values.  Using the plot, iteratively focus on a study interval.
 ```{r}
-study.int <- c(200,300) #select the study interval here
+study.int <- c(750,950) #select the study interval here
 plot(qtc$discharge, type = 'n', ylab = 'discharge')
 rect(study.int[1], 0, study.int[2], 20, col = 'deepskyblue')
 lines(qtc$discharge)
@@ -338,8 +338,8 @@ abline(v = study.int[1], lty = 4)
 ```
 create a linear patch.  If there are no holes in the data, set patch start and patchend to the same value.  That will help ensure that later code chunks run properly.
 ```{r}
-patchstart <- 763
-patchend <- 763
+patchstart <- 760
+patchend <- 940
 patchlength <- patchend - patchstart +1
 linpatch <- seq(qtc$discharge[patchstart],qtc$discharge[patchend], length.out= patchlength)
 
@@ -349,7 +349,7 @@ generate a new dataframe and patch missing data with linear interpolation
 ```{r}
 lin.df <- qtc
 lin.df$discharge[patchstart:patchend] <- linpatch
-plot(lin.df$discharge, type = 'l', xlim = c(730,780), ylim=c(0,5), 
+plot(lin.df$discharge, type = 'l', xlim = c(750,950), ylim=c(0,1), 
      ylab = 'discharge', main = paste(sitename, 'patched data'), col = 'red')
 lines(qtc$discharge)
 ```
@@ -359,14 +359,14 @@ Look at the sensitivity of ACF functions to windowing within a water year
 ```{r}
 a <- study.int[1]  #index of starting time
 #a <- 518
-c <- 130  #window width (number of days)
+c <- 200  #window width (number of days)
 b <- a+c    #calculates final index
 b <- study.int[2]   #index of ending time
-win1 <- c(a,1000)
-win2 <- c(a,1050)
+win1 <- c(a,875)
+win2 <- c(a,920)
 win3 <- c(a,b)
-win4 <- c(1000,b)
-win5 <- c(1050,b)
+win4 <- c(760,940)
+win5 <- c(820,b)
 yrange <- c(0,max(qtc$discharge[a:b], na.rm = T))
 
 #plot discharge over the window.  The line gets plotted later over the highlight rectangle
@@ -375,15 +375,15 @@ plot(qtc$discharge, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge
      )
 
 #highlight ranges for each window of ACF analysis
-rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
-rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
+#rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
+#rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
 rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
 rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
 rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
 
 #draw and annotate a box around any patches that exist.  Adjust numbers to position vertically
-rect(patchstart, 0.5, patchend, 1.5)  #draw a box around patched section of line
-text(mean(patchstart,patchend), 0.3, 'Patched values')  #annotate patch box
+#rect(patchstart, 0.5, patchend, 1.5)  #draw a box around patched section of line
+#text(mean(patchstart,patchend), 0.47, 'Patched values')  #annotate patch box
 
 lines(lin.df$discharge, type = 'l', col = 'red')
 lines(qtc$discharge, type = 'l')
@@ -426,7 +426,7 @@ abline(h = 0.2, lty = 3)
 
 ```{r}
 plot(acf3$lag, acf3$acf, type = 'l', col=linecols[3],
-     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,30),
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0,1), xlim = c(0,60),
      main = paste('Autocorrelation patch sensitivity:', sitename))
 lines(acf3.1$acf, col = linecols[3], lty = 2)
 
@@ -441,7 +441,38 @@ abline(h = 0.2, lty = 3)
 legend('topright', legend = c('QC data', 'patched data'), lty = c(1,2))
 ```
 
+```{r}
 
+ccf3 <- ccf(qtc$discharge[win3[1]:win3[2]],crossdf$SWIT[win3[1]:win3[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+ccf4 <- ccf(qtc$discharge[win4[1]:win4[2]],crossdf$SWIT[win4[1]:win4[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+ccf5 <- ccf(qtc$discharge[win5[1]:win5[2]],crossdf$SWIT[win5[1]:win5[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+ccf3.1 <- ccf(lin.df$discharge[win3[1]:win3[2]],crossdf$SWIT[win3[1]:win3[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+ccf4.1 <- ccf(lin.df$discharge[win4[1]:win4[2]],crossdf$SWIT[win4[1]:win4[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+ccf5.1 <- ccf(lin.df$discharge[win5[1]:win5[2]],crossdf$SWIT[win5[1]:win5[2]], lag.max = 50, 
+            type = "correlation", plot = F, na.action = na.pass)
+```
+
+```{r}
+plot(ccf3$lag, ccf3$acf, type = 'l', col=linecols[3],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.3,0.3), xlim = c(0,30),
+     main = paste('Q|SWIT crosscorrelation patch sensitivity:', sitename))
+lines(ccf3.1$acf, col = linecols[3], lty = 2)
+
+lines(ccf4$acf, col = linecols[4])
+lines(ccf4.1$acf, col = linecols[4], lty = 2)
+
+lines(ccf5$acf, col = linecols[5])
+lines(ccf5.1$acf, col = linecols[5], lty = 2)
+
+abline(h = 0.2, lty = 3)
+
+legend('bottomright', legend = c('QC data', 'patched data'), lty = c(1,2))
+```
 
 ### This section looks at variability in CCF results based on windowing and SNOTEL station selection.  It requires running the "correlograms" script far enough to create the "crossdf" object.  The section on ACF generation can be skipped over.
 

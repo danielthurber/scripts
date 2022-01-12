@@ -1,0 +1,93 @@
+---
+title: "Baseflows"
+author: "Daniel Thurber"
+date: "1/4/2022"
+output: pdf_document
+---
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+library(tidyverse)
+
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
+               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
+               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring')
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4', 'tan1')
+rgbmat <- col2rgb(linecols)
+```
+
+```{r}
+all.sites <-  read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO_sites.csv')
+all.sites$date <- as.Date(all.sites$date,'%m/%d/%Y')
+colnames(all.sites)
+```
+
+
+```{r}
+all.sites$day <- format(as.Date(all.sites$date, '%m/%d/%Y'),'%m-%d')
+all.sites$wyday <- 0
+all.sites$WY <- NA
+
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+
+for (i in 1:nrow(all.sites)){
+  all.sites$wyday[i] <- wydates$wyday[which(wydates$day==all.sites$day[i])]
+}
+
+all.sites$WY = ifelse(as.numeric(format(all.sites$date,'%m'))>=10, 
+                     as.numeric(format(all.sites$date,'%Y'))+1, 
+                     as.numeric(format(all.sites$date,'%Y')))
+
+colnames(all.sites)
+```
+
+```{r}
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH',
+               'RS', 'TS', 'SC', 'WC', 'GC', 'WS')
+```
+
+```{r}
+site.areas <- c(65.9767, #FB
+                277.965, #TG
+                103.4015, #BC
+                41.4076, #TF
+                65.1986, #RH
+                NA, #RS
+                8.6085, #TS
+                14.7168, #SC
+                403.874, #WC
+                520.8331, #GC
+                NA #WS
+                )
+```
+
+```{r}
+all.sites$date[which(all.sites$wyday==152)]
+```
+```{r}
+FB.base <- na.omit(all.sites$FB_QP[which(all.sites$wyday<153)])/site.areas[1]
+TG.base <- na.omit(all.sites$TG_QP[which(all.sites$wyday<153)])/site.areas[2]
+BC.base <- na.omit(all.sites$BC_QP[which(all.sites$wyday<153)])/site.areas[3]
+TF.base <- na.omit(all.sites$TF_QP[which(all.sites$wyday<153)])/site.areas[4]
+RH.base <- na.omit(all.sites$RH_QP[which(all.sites$wyday<153)])/site.areas[5]
+TS.base <- na.omit(all.sites$TS_QP[which(all.sites$wyday<153)])/site.areas[7]
+SC.base <- na.omit(all.sites$SC_QP[which(all.sites$wyday<153)])/site.areas[8]
+WC.base <- na.omit(all.sites$WC_QP[which(all.sites$wyday<153)])/site.areas[9]
+GC.base <- na.omit(all.sites$GC_QP[which(all.sites$wyday<153)])/site.areas[10]
+
+```
+
+```{r}
+boxplot(FB.base,BC.base, TF.base, RH.base, TS.base, SC.base, WC.base, GC.base, 
+        xlab = 'catchment', col = linecols, ylab = 'discharge (mm/hr)', main = 'Normalized baseflows')
+axis(side=1, at = seq(1,8), labels = c('FB', 'BC', 'TF', 'RH', 'TS', 'SC', 'WC', 'GC'))
+```
+

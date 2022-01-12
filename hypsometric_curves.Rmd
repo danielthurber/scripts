@@ -1,0 +1,112 @@
+---
+title: "Hypsometric Curve Generator"
+author: "Daniel Thurber"
+date: "10/14/2020"
+output: pdf_document
+---
+```{r}
+library(zoo, warn.conflicts = F)
+library(raster, warn.conflicts = F)
+```
+
+
+```{r}
+inraster <- raster('C:/Users/Daniel/Documents/Research/hypsometric_curves/GC_DEM.tif')
+elevFreq <- freq(inraster)
+```
+
+
+```{r}
+catchment <- 'Logan River @ Guinivah'  #full river name to display in plots
+#GCS: 7705, KN: 7250, TF: 7406, USUDD: 8270, TGRS: 6332, TGL: 8474, FB: 8140
+st1 <- 'Tony Grove RS'
+st1el <- 6332*.3048  #elevations in feet: multiply by 0.3048 ft/m
+#st2 <- ''
+#st2el <- 7987*.3048
+```
+
+View the elevFreq dataframe.  If there are rows for zero or negative values, remove them.
+```{r}
+head(elevFreq,3)
+tail(elevFreq,3)
+st1el
+```
+
+Create a dataframe with frequencies of all elevation values and cumulative sums
+```{r}
+truelev <- data.frame(elevFreq[c(1:(nrow(elevFreq)-1)),]) #ignores last row with NA values
+#truelev <- data.frame(elevFreq[-c(1,2),]) #use this to remove any rows
+for (i in seq(1,nrow(truelev))){
+  truelev$sum[i] <- sum(truelev$count[1:i])
+}
+
+truelev$CDVal <- truelev$sum/sum(truelev$count)
+tail(truelev,2) #last two lines should approach and equal 1 for CDVal
+```
+
+Determine and look at the total range of elevations
+```{r}
+minelev <- min(truelev$value)
+maxelev <- max(truelev$value)
+elevrange <- maxelev - minelev+1
+minelev
+maxelev
+elevrange
+```
+Generate a column of elevation proportion and determine hypsometric integral and median elevation
+```{r}
+truelev$elevprop <- (truelev$value-minelev)/elevrange
+head(truelev,3)
+tail(truelev,3)
+HI <- sum(truelev$CDVal)/(elevrange) #determines hypsometric integral (ver. 2.0)
+medElev <- truelev$value[which(truelev$CDVal>0.5)[1]] #displays the median
+paste('Hypsometric Integral:', HI, '; median elevation (m):', medElev)
+
+```
+
+
+```{r}
+truelev$local11 <- c(NA,NA,NA,NA,NA,rollmean(truelev$count,11),NA,NA,NA,NA,NA)
+```
+
+
+
+```{r}
+plot(truelev$CDVal~truelev$value, 
+     xlab = 'Elevation', 
+     ylab = "Cumulative Percent", 
+     ylim = c(0,1),
+     main = paste0('Cumulative Elevation Distribution for ', catchment), 
+     type = 'l')
+abline(v = st1el, col = 'darkolivegreen4')
+#abline(v = st2el, col = 'lightsalmon2')
+legend('bottomright', inset = .05, lty = 1, legend = c(st1), col = c('darkolivegreen4'), title = 'SnoTel Sites')
+```
+
+```{r}
+plot((truelev$count/sum(truelev$count))~truelev$value,
+     xlab = 'Elevation',
+     ylab = "Cumulative Percent",
+     main = paste0('Relative Elevation Distribution for ', catchment),
+     type = "l")
+
+```
+
+
+
+```{r}
+plot((truelev$local11/sum(truelev$count))~truelev$value,
+     xlab = 'Elevation',
+     ylab = "Relative Percent",
+     main = paste0('Relative Elevation Distribution for ', catchment),
+     type = "l")
+abline(v = st1el, col = 'darkolivegreen4')
+abline(v = st2el, col = 'lightsalmon2')
+legend('topleft', inset = .05, lty = 1, legend = c(st1, st2), col = c('darkolivegreen4','lightsalmon2'), title = 'SnoTel Sites')
+```
+
+
+Hypsometry toolbox available 
+
+https://gis.sfsu.edu/content/hypsometry-tools#:~:text=The%20hypsometric%20curve%20(area%E2%80%93altitude,watershed%20area%20and%20stream%20gradient.
+

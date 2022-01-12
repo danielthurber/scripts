@@ -9,9 +9,9 @@ mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as 
 library(ggplot2)
 library(naniar)
 sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
-               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
+               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
-               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
+               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring')
 i <- 2
 
 site <- sitecodes[i]               #enter site code for file upload and export
@@ -21,7 +21,7 @@ linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sie
 #color vector gets used by other plotting scripts.  Attempt to maintain any changes made to the palette
 ```
 
-
+### run patching protocol for a selected site
 If you are re-opening a previously patched file, do so with this chunk
 ```{r}
 crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
@@ -32,7 +32,7 @@ crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 Begin by running SNOTEL and LRO_aquatic scripts to generate the qtc and snodf dataframes as .csv files.  This chunk will re-open them.
 
 ```{r}
-snofile <- 'UDD_1098.csv'
+snofile <- 'TGL_823.csv'
 #FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 
 qtc <- read.csv(paste0(mypath,site,'.csv'), stringsAsFactors = F)
@@ -215,12 +215,13 @@ Discharge
 ---
 Create plots of patched time series and highlight the holes in data
 ```{r}
-date.mark <- '10-01' #vertical blue lines will be drawn at this date for reference
+date.mark <- '04-01' #vertical blue lines will be drawn at this date for reference
 plot(crossdf$qpatch, type = 'n', ylab = 'discharge', main = paste('Patched discharge at', sitename))
 abline(v = which(is.na(crossdf$discharge)), col = 'seagreen2')
 abline(v = qholes, col = 'red')
 lines(crossdf$qpatch)
 abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod2')
+
 lines(crossdf$discharge1)
 
 #add lines on the defined date to delineate water years
@@ -229,10 +230,17 @@ lines(crossdf$discharge1)
 #rgb(78,238,148, alpha = 0, maxColorValue = 255)
 ```
 
+```{r}
+which(format(crossdf$date,'%m-%d')=='11-01')
+which(format(crossdf$date,'%m-%d')=='03-15')
+```
+
+
 Zoom in on a section of the discharge plot worth patching
 
 ```{r}
-patch.int <- c(940, 975)
+patch.int <- c(2385,2395)
+na.thresh <- 01
 
 patch.rng <- range(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)
 #qholes
@@ -241,23 +249,39 @@ plot(crossdf$qpatch, xlim=patch.int, ylim = c(0,max(crossdf$qpatch[patch.int[1]:
      type= 'l', main = paste(sitename,'centered at',crossdf$date[mean(patch.int)]), 
      ylab = 'discharge', col = 'seagreen2')
 abline(v = qholes, col = 'red')
-lines(crossdf$discharge)
+abline(h = na.thresh, lty = 3)
+#lines(crossdf$discharge)
+abline(v = frozen, col = 'goldenrod')
+```
+
+--- the next two chunks remove original values exceeding the threshold defined above
+```{r}
+spikes <- which(crossdf$qpatch>na.thresh)
+frozen <- spikes[which(spikes>patch.int[1]&spikes<patch.int[2])]
+frozen
 
 ```
 
+replace spiked values with NA
+```{r}
+crossdf$qpatch[frozen] <- NA
+qholes <- which(is.na(crossdf$qpatch))
 
-for single patches, enter the index (in console) to interpolate
+```
+--- for single patches, enter the index (in console) to interpolate
 ```{r}
 spike <- as.integer(readline(prompt = "Enter index to patch:")) #enter prompt in console
 crossdf$qpatch[spike] <- mean(crossdf$qpatch[(spike-1):(spike+1)], na.rm = T) #range can be adjusted
 qholes <- which(is.na(crossdf$qpatch))
 ```
 
+---
+
 find the length of the patch.  Check the third outcome is "TRUE"
 ```{r}
 patch.len <-  sum(is.na(crossdf$qpatch[patch.int[1]:patch.int[2]]))
 i1 <- 1 #first index of qholes to consider
-i2 <- 6 #final value of qholes to consider
+i2 <- 20 #final value of qholes to consider
 i2 <- i1-1+patch.len
 patch.len 
 paste('replace from index', qholes[i1], 'to', qholes[i2])
@@ -316,7 +340,7 @@ crossdf$qpatch[j:k]=crossdf$discharge[j:k]
 If it looks good, reset the qholes vector
 ```{r}
 qholes <- which(is.na(crossdf$qpatch))
-qholes[1:10]
+qholes[1:50]
 
 ```
 
@@ -334,6 +358,7 @@ Create vectors of the values within the patch interval on which to evaluate a re
 reg.vals <- crossdf$qpatch[patch.int[1]:patch.int[2]]
 reg.ind <- seq(length.out = length(reg.vals))
 ```
+
 plot the log-transformed values and a fitted linear model and consider the validity of an exponential patch
 ```{r}
 patch.mod <- lm(log(reg.vals)~reg.ind)
@@ -437,6 +462,75 @@ lines(qtc$discharge, type = 'l')
 axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6)]))
 
 ```
+
+
+
+
+
+
+### compile patched data into a single dataframe (all_LRO_sites.csv)
+```{r}
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH',
+               'RS', 'TS', 'SC', 'WC', 'GC','WS')
+i <- 11
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+```
+Read in the patched data for the site, view the data, and re-assign "site" to the abbreviated code
+```{r}
+site.df <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+site.df$date <- as.Date(site.df$date,'%Y-%m-%d')
+head(site.df)
+site <- siteabbr[i]
+```
+
+Confine the dataframe to only LRO observed and patched data
+```{r}
+site.df <- site.df[c('date','discharge','conductance','temp','cpatch','qpatch')]
+head(site.df, 3)
+```
+
+designate and print out new column names
+```{r}
+new.col.names <- c('date', paste0(site,'_Q'), paste0(site,'_C'), 
+                   paste0(site,'_T'), paste0(site,'_CP'), paste0(site,'_QP'))
+new.col.names
+```
+
+Assign new column names to the dataframe
+```{r}
+colnames(site.df)[which(colnames(site.df)=='discharge')] <- new.col.names[2]
+colnames(site.df)[which(colnames(site.df)=='conductance')] <- new.col.names[3]
+colnames(site.df)[which(colnames(site.df)=='temp')] <- new.col.names[4]
+colnames(site.df)[which(colnames(site.df)=='cpatch')] <- new.col.names[5]
+colnames(site.df)[which(colnames(site.df)=='qpatch')] <- new.col.names[6]
+head(site.df, 3)
+```
+Merge the site data to the dataframe with all site data.  Print results should show a stable or increasing number of columns, a row of "FALSE", and a row of "TRUE"
+```{r}
+new.col.names[c(2:6)] %in% colnames(all.sites)
+nrow(all.sites)
+all.sites <- merge(all.sites, site.df, by = 'date', all = T)
+site.df <- NULL
+new.col.names %in% colnames(all.sites)
+nrow(all.sites)
+
+tail(colnames(all.sites))
+```
+Return to the top of the sequence and select a new site.
+
+Save the dataframe
+```{r}
+write.csv(all.sites, 'C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO_sites.csv',row.names = F)
+```
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,261 @@
+---
+title: "Correlation Comparison"
+author: "Daniel Thurber"
+date: "11/22/2021"
+output: pdf_document
+---
+Initialize the session
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+library(tidyverse)
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
+               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
+               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground', 'Sawmill Spring', 'State Dam')
+acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'SS_', 'SD_')
+acf.years <- c('15','16','17','18','19','20','21')
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+rgbmat <- col2rgb(linecols)/255
+```
+
+### Compare correlation functions between sites in a given year
+```{r}
+corr.df <- read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/correlograms.csv')
+
+```
+
+
+```{r}
+#enter the 
+sites <- c('FB', 'TF', 'RH') #enter the indices for the sites you want to compare
+years <- c('20')
+season <- c('F','B')
+variable <- c('Q')
+funct <- c('A')
+
+sel.codes <- colnames(corr.df)
+
+#filter by site
+sel.cols <- which(str_sub(sel.codes,1,2) %in% sites) 
+sel.codes <- sel.codes[sel.cols]
+
+#filter by year
+sel.cols <- which(str_sub(sel.codes,4,5) %in% years) 
+sel.codes <- sel.codes[sel.cols]
+
+#filter by season
+sel.cols <- which(str_sub(sel.codes,7,7) %in% season) 
+sel.codes <- sel.codes[sel.cols]
+
+#filter by variable
+sel.cols <- which(str_sub(sel.codes,9,9) %in% variable) 
+sel.codes <- sel.codes[sel.cols]
+
+#filter by function
+sel.cols <- which(str_sub(sel.codes,11,11) %in% funct) 
+sel.codes <- sel.codes[sel.cols]
+
+sel.codes
+```
+
+
+```{r}
+comp.df <- corr.df[c('lag',sel.codes)]
+head(comp.df)
+```
+
+Generate plot label string
+```{r}
+lab <- "Discharge ACF for 2020"
+lab
+colnames(comp.df)
+```
+
+```{r}
+#set line parameters
+lncolors <- c(1,2,3,1,2,3) #number based on site
+linetypes <- c(1,1,1,2,2,2) #1 for runoff, 2 for baseflow
+ln.names <- c('FB', 'TF','RH', 'FB - base', 'TF - base','RH - base')
+
+plot(comp.df$lag, comp.df$acf, col=linecols[1],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0.1,1), xlim = c(0,50), 
+     main = lab,
+     type = 'n', #change to 'n' to hide, 'l' to show
+     )
+
+for(i in c(2:ncol(comp.df))){
+  lines(comp.df[i], col = linecols[lncolors[i-1]],lty=linetypes[i-1])
+}
+
+abline(h = 0.2, lty = 3)
+
+legend('topright', legend = ln.names, lty = linetypes, col = linecols[lncolors]) 
+```
+
+
+
+
+```{r}
+comp.names <- sitenames[sites]
+#identify sites to compare
+comp.sites <- acf.sites[sites] 
+#FB_, TG_, BC_, TF_, RH_, RS_, TS_, SC_, WC_, GC_, SS_, SD_
+
+#If years are absent, manage that by commenting out operations later
+acf.year <- '18' #choose year for comparison 
+acf.season <- '_F' #_F, _W, _B - set season code (runoff, wet, baseflow)
+acf.variable <- '_C' #_Q, _C - set discharge/conductance variable
+acf.function <- "_A" #_A, _C, _S - set ACF, CCF(UEB), or CCF(SNOTEL) function
+acf.codes <- paste0(comp.sites, acf.year, acf.season, acf.variable, acf.function)
+acf.codes
+plot.type <- 'C Autocorrelation'
+```
+```{r}
+plot(corr.df$lag, corr.df[,acf.codes[1]],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.99), xlim = c(0,50), 
+     main = paste0(plot.type, ' for water year 20', acf.year), #write title each time!
+     type = 'n', #change to 'n' to hide, 'l' to show
+     )
+
+for (i in 1:length(sites)) {
+  
+#for SC cross correlations, add a negative sign before the vector call
+lines(corr.df[acf.codes[i]], col = linecols[sites[i]],xlim = c(0,50))
+}
+
+abline(h = 0.2, lty = 3)
+abline(h = -0.2, lty = 3)
+
+legend('bottomleft', legend = sitenames[sites], lty = 1, col = linecols[sites])
+```
+
+
+
+
+### Compare correlation metrics (lag times)
+```{r}
+corr.df <- read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/corr_metrics.csv')
+corr.df$season[which(corr.df$season == F)]='F'
+
+colnames(corr.df)[1]='site'
+#colnames(corr.df)[5]='funct'
+```
+
+
+```{r}
+#enter the 
+sites <- c('FB','TG','BC', 'TF', 'RH', 'TS', 'SC', 'WC', 'GC') #enter the codes for the sites you want to compare
+years <- c(19)
+season <- c('F') #F - full runoff  #B - Baseflow
+variable <- c('Q') #Q, C
+funct <- c('A') #A - ACF, CP - SWIT ccf lag to peak, CL - SWIT ccf lag to 0.2
+comp.factor <- 'site'
+comp.df <- (corr.df)
+
+#filter by site
+sel.rows <- which(comp.df$site %in% sites) 
+comp.df <- comp.df[sel.rows,]
+
+#filter by year
+sel.rows <- which(comp.df$year %in% years) 
+comp.df <- comp.df[sel.rows,]
+#filter by season
+sel.rows <- which(comp.df$season %in% season) 
+comp.df <- comp.df[sel.rows,]
+#filter by variable
+sel.rows <- which(comp.df$variable %in% variable) 
+comp.df <- comp.df[sel.rows,]
+
+#filter by function
+sel.rows <- which(comp.df$funct %in% funct) 
+comp.df <- comp.df[sel.rows,]
+
+comp.df[,comp.factor] <-  as.factor(comp.df[,comp.factor])
+#comp.df$year <- as.factor(comp.df$year)
+#comp.df$site <- as.factor(comp.df$site)
+
+comp.df
+```
+
+```{r}
+title <- 'Q ACF total lag times - 2019'
+y.label <- 'lag time (days)'
+x.label <- 'catchment area'
+```
+
+
+```{r}
+par(mar=c(4,4,5,6))
+plot(comp.df$value~comp.df$area, col=comp.df[,comp.factor], pch = 19,
+     main = title, ylab = y.label, xlab = x.label)
+#axis(3, at = unique(comp.df$karst_frac), labels = unique(comp.df$site), srt = -90)
+legend('right',title = comp.factor,legend = unique(comp.df[,comp.factor]), col = comp.df[,comp.factor], pch = 19, inset = c(-.13,0), xpd = T)
+```
+
+
+Generate plot label string
+```{r}
+lab <- "Discharge ACF for 2020"
+lab
+colnames(comp.df)
+```
+
+```{r}
+#set line parameters
+lncolors <- c(1,2,3,1,2,3) #number based on site
+linetypes <- c(1,1,1,2,2,2) #1 for runoff, 2 for baseflow
+ln.names <- c('FB', 'TF','RH', 'FB - base', 'TF - base','RH - base')
+
+plot(comp.df$lag, comp.df$acf, col=linecols[1],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(0.1,1), xlim = c(0,50), 
+     main = lab,
+     type = 'n', #change to 'n' to hide, 'l' to show
+     )
+
+for(i in c(2:ncol(comp.df))){
+  lines(comp.df[i], col = linecols[lncolors[i-1]],lty=linetypes[i-1])
+}
+
+abline(h = 0.2, lty = 3)
+
+legend('topright', legend = ln.names, lty = linetypes, col = linecols[lncolors]) 
+```
+
+
+
+
+```{r}
+comp.names <- sitenames[sites]
+#identify sites to compare
+comp.sites <- acf.sites[sites] 
+#FB_, TG_, BC_, TF_, RH_, RS_, TS_, SC_, WC_, GC_, SS_, SD_
+
+#If years are absent, manage that by commenting out operations later
+acf.year <- '18' #choose year for comparison 
+acf.season <- '_F' #_F, _W, _B - set season code (runoff, wet, baseflow)
+acf.variable <- '_C' #_Q, _C - set discharge/conductance variable
+acf.function <- "_A" #_A, _C, _S - set ACF, CCF(UEB), or CCF(SNOTEL) function
+acf.codes <- paste0(comp.sites, acf.year, acf.season, acf.variable, acf.function)
+acf.codes
+plot.type <- 'C Autocorrelation'
+```
+```{r}
+plot(corr.df$lag, corr.df[,acf.codes[1]],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.99), xlim = c(0,50), 
+     main = paste0(plot.type, ' for water year 20', acf.year), #write title each time!
+     type = 'n', #change to 'n' to hide, 'l' to show
+     )
+
+for (i in 1:length(sites)) {
+  
+#for SC cross correlations, add a negative sign before the vector call
+lines(corr.df[acf.codes[i]], col = linecols[sites[i]],xlim = c(0,50))
+}
+
+abline(h = 0.2, lty = 3)
+abline(h = -0.2, lty = 3)
+
+legend('bottomleft', legend = sitenames[sites], lty = 1, col = linecols[sites])
+```

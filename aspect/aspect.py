@@ -1,3 +1,5 @@
+
+
 print("importing libraries...")
 import os
 import arcpy
@@ -34,5 +36,7 @@ outAspect = arcpy.ddd.Aspect(Eraster, Araster)
 
 print('generating hillshade raster...')
 outHS = arcpy.ddd.HillShade(Eraster, Hraster, 180, 37, "NO_SHADOWS", 1)
+
+print('generating slope raster...')
 
 print('all rasters complete')
