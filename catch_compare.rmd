@@ -1,0 +1,70 @@
+---
+title: "Catchment Comparison"
+author: "Daniel Thurber"
+date: "1/18/2022"
+output: pdf_document
+---
+
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+library(ggplot2)
+library(naniar)
+library(tidyverse)
+
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
+               'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
+               'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
+              'TS', 'SC', 'WC', 'GC', 'WS','FD')
+i <- 5
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 
+              'aquamarine3', 'magenta4', 'tan1','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,3,1)
+rgbmat <- col2rgb(linecols)
+```
+
+Initialize catchment areas in km^2
+```{r}
+site.areas <- c(65.9767, #FB
+                277.965, #TG
+                103.4015, #BC
+                41.4076, #TF
+                65.1986, #RH
+                NA, #RS
+                8.6085, #TS
+                14.7168, #SC
+                403.874, #WC
+                520.8331, #GC
+                NA, #WS
+                554 #FD
+                )
+```
+
+
+--- compare baseflow ranges to HI
+```{r}
+catch.compare <- data.frame(
+  catchment = c('FB', 'TG', 'BC', 'TF','RH', 'RS', 'TS', 'SC', 'WC', 'GC', 'WS','FD'),
+#  site.i <- c(1:12),
+  HI = c(0.473, 0.502, 0.519, 0.491, 0.564, NA, 0.566, 0.514, 0.542, 0.519, NA, NA)
+)
+```
+
+```{r}
+for (i in 1:nrow(new.catch)){
+  if (new.catch$catchment[i] %in% bf.iqr$catchment){
+  new.catch$bfr.20[i] <- bf.iqr$bf.iqr.20[which(bf.iqr$catchment==new.catch$catchment[i])]
+  }
+}
+new.catch
+```
+
+
+```{r}
+#merge(catch.compare,bf.iqr, by = 'catchment', all = T, sort = F)
+```

@@ -17,14 +17,14 @@ sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'R
                'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
 siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
               'TS', 'SC', 'WC', 'GC', 'WS','FD')
-i <- 1
+i <- 5
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
    #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 
-              'aquamarine3', 'magenta4', 'tan1','cyan','violetred2','yellow2')
-linetypes <- c(1,1,1,1,1,3,1,1,1,1,3,1)
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,4,1)
 rgbmat <- col2rgb(linecols)
 ```
 
@@ -47,8 +47,8 @@ site.areas <- c(65.9767, #FB
 
 Take a look at the color palette, adjust if desired
 ```{r, fig.height=1.5, fig.width=7}
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 
-              'aquamarine3', 'magenta4', 'tan1','cyan','violetred2','yellow2')
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
 par(mar = c(4,0,0,0))
 image(1:length(linecols),.1, as.matrix(1:length(linecols)), col = linecols, yaxt = 'n', ylab = '', xlab = 'catchment', xaxt = 'n')
 axis(side = 1, at = 1:length(linecols), labels = siteabbr)
@@ -96,7 +96,10 @@ pltyears <- seq(min(qtc$WY),max(qtc$WY))
 
 wylabels <- wydates$day[seq(xrange[1],xrange[2],length.out = dayticks)]
 plot(qtc$wyday[which(qtc$WY==pltyears[1])],qtc$discharge[which(qtc$WY==pltyears[1])], type = 'l', 
-     xlim = xrange, ylim = yrange, xaxt = 'n',
+#     xlim = xrange, 
+      ylim = yrange, 
+     xlim = c(170,290),
+     xaxt = 'n',
      xlab = 'Day of Year', ylab = 'Discharge (cms)', col = linecols[1],
      main = paste('Discharge of ', sitename, ' by water year'))
 axis(1, at = seq(xrange[1],xrange[2],length.out = dayticks), labels = wylabels)
@@ -212,11 +215,106 @@ mtext("discharge", side = 4, line = 3)
 
 
 
+### plot water year discharge SWIT together
+```{r}
+i <- 5
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
+paste('date format:', crossdf$date[1])
+```
+Check the format of the date as printed above and activate the appropriate date formatting line below
+```{r}
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+#crossdf$date <- as.Date(crossdf$date,'%m/%d/%Y')
+paste('starting date:', crossdf$date[1])
+paste('Water years:') 
+paste(unique(crossdf$WY))
+```
+
+```{r}
+plot(crossdf$qpatch~crossdf$date, type = 'l')
+plot(crossdf$SWIT~crossdf$date, type = 'l')
+
+```
+
+
+Generate a dataframe for a selected year, caculate total SWIT for that year
+```{r}
+wateryear <- 2018
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+sum(wydf$SWIT)
+```
+
+
+
+
+```{r}
+par(mar = c(4,4,4,6))
+a <- 124 #index to start plot
+b <- 300 #approx one year after a
+barplot(wydf$SWIT[a:b], axes = F)
+axis(side = 4, at = pretty(range(wydf$SWIT[a:b]), n = 4),main = 'SWIT')
+mtext('Surface water input (mm)', side = 4, line = 2)
+
+par(new=T)
+yrange = range(wydf$qpatch[a:b], na.rm = T)
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(wydf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'Discharge (m^3/s)', 
+     col = linecols[i],
+     main = paste('SWIT & discharge at', sitename,wydf$WY[a]), xaxt = 'n', xlab = 'date'
+     )
+axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 6)]))
+
+
+```
+```{r}
+par(mar = c(4,4,4,6))
+a <- 124 #index to start plot
+b <- 300 #approx one year after a
+barplot(wydf$SWI[a:b], axes = F)
+axis(side = 4, at = pretty(range(wydf$SWI[a:b]), n = 4),main = 'SWI')
+mtext('Surface water input (mm)', side = 4, line = 2)
+
+par(new=T)
+yrange = range(wydf$qpatch[a:b], na.rm = T)
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(wydf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'Discharge (m^3/s)', 
+     col = linecols[i],
+     main = paste('SNOTEL-based SWI & discharge at', sitename,wydf$WY[a]), xaxt = 'n', xlab = 'date'
+     )
+axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 6)]))
+
+
+```
+
+
+```{r}
+par(mar = c(4,4,4,6))
+a <- 124 #index to start plot
+b <- 300 #approx one year after a
+barplot(wydf$SWIT[a:b], axes = F)
+axis(side = 4, at = pretty(range(wydf$SWIT[a:b]), n = 4),main = 'SWIT')
+mtext('Surface water input (mm)', side = 4, line = 2)
+
+par(new=T)
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(wydf$qpatch*3.6/site.areas[i], xlim = c(a, b), ylim = c(0,0.05), type = 'l', ylab = 'Discharge (mm/hr)', 
+     col = linecols[i],
+     main = paste('SWIT & normalized discharge at', sitename,wydf$WY[a]), xaxt = 'n', xlab = 'date'
+     )
+axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 6)]))
+
+
+```
+
 ### plot aquatic variable for multiple sites within a selected water year
 --- import, prepare, and filter dataframe for all sites
 ```{r}
 all.sites <-  read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO_sites.csv')
 all.sites$date <- as.Date(all.sites$date,'%m/%d/%Y')
+class(all.sites$date)
 colnames(all.sites)
 ```
 
@@ -238,11 +336,12 @@ all.sites$WY = ifelse(as.numeric(format(all.sites$date,'%m'))>=10,
                      as.numeric(format(all.sites$date,'%Y')))
 
 colnames(all.sites)
+paste(class(all.sites$date), all.sites$date[1])
 ```
 Select water year and variable of interest, restrict dataframe by water year
 ```{r}
-water.year <- 2016
-variable <- "QP"
+water.year <- 2019
+variable <- "CP"
 wy.df <- all.sites[which(all.sites$WY==water.year),]
 ```
 
@@ -261,17 +360,15 @@ paste(length(sel.cols), 'sites')
 Filter dataframe with only selected columns
 ```{r}
 wy.df <- wy.df[c(date.cols,sel.cols)]
-head(wy.df)
 date.cols <- NULL
 sel.cols <- NULL
-summary(wy.df)[1,5:ncol(wy.df)]
 
 ```
 
 
 --- plot area-Normalized discharge
 ```{r}
-choices <- c(1,2,9,10,12)
+choices <- c(1,3,4,5,7,8,12)
 site.choices <- siteabbr[choices]
 
 plot.cols <- which(substr(colnames(wy.df),1,2) %in% site.choices)
@@ -291,7 +388,7 @@ b <- 320
 
 par(mar = c(4,4,5,6))
 plot(wy.df$FB_QP, xaxt = 'n', xlab = 'day', ylab = 'normalized Q (mm/hr)',
-     xlim = c(a,b), ylim = c(0, .1),
+     xlim = c(a,b), ylim = c(0, .3),
      main = paste('discharge for Logan subcatchments -', water.year),type = 'n')
 axis(1, at = seq(a,b, length.out = 8), labels = (wy.df$day[seq(a,b,length.out = 8)]))
 
@@ -307,12 +404,34 @@ for (i in 1:length(plot.cols)){
 legend('right', inset = -0.2, legend = site.choices, lty = linetypes[choices], col = linecols[choices], xpd = T)
 ```
 
+Plot each relative to the discharge of first dam
 
+```{r}
+a <- 120
+b <- 320
+
+par(mar = c(4,4,5,6))
+plot(wy.df$FB_QP, xaxt = 'n', xlab = 'day', ylab = 'normalized Q (mm/hr)',
+     xlim = c(a,b), ylim = c(0, 5),
+     main = paste('Relative response for Logan subcatchments -', water.year),type = 'n')
+axis(1, at = seq(a,b, length.out = 8), labels = (wy.df$day[seq(a,b,length.out = 8)]))
+
+for (i in 1:length(plot.cols)){
+  lines(wy.df[,plot.cols[i]]/site.areas[choices[i]]/(wy.df$FD_QP/site.areas[12]), col = linecols[choices[i]], lty = linetypes[choices[i]])
+}
+
+#lines(wy.df$FB_QP*3.6/site.areas[1], col = linecols[1])
+
+
+
+
+legend('right', inset = -0.2, legend = site.choices, lty = linetypes[choices], col = linecols[choices], xpd = T)
+```
 
 
 --- plot peak-normalized discharge
 ```{r}
-choices <- c(1,3,4,5,6,7,8,11,12)
+choices <- c(2,6,9,11)
 site.choices <- siteabbr[choices]
 
 plot.cols <- which(substr(colnames(wy.df),1,2) %in% site.choices)
@@ -397,4 +516,45 @@ apply(baseflow.df[,choices],2,FUN = IQR, na.rm = T)
 
 
 
----
+
+
+
+--- Conductance plots
+```{r}
+choices <- c(6,7,8,9)
+choices <- c(1,3,4,5,9)
+site.choices <- siteabbr[choices]
+
+plot.cols <- which(substr(colnames(wy.df),1,2) %in% site.choices)
+
+na.check = rep(NA,length(plot.cols))
+for(i in 1:length(plot.cols)){
+  na.check[i] <- sum(is.na(wy.df[,plot.cols[i]]))
+}
+
+data.frame('sites'=site.choices,'ID' = choices, 'column' = plot.cols, 'NA_count' = na.check)
+
+```
+
+
+```{r}
+a <- 120
+b <- 320
+
+par(mar = c(4,4,5,6))
+plot(wy.df$FB_QP, xaxt = 'n', xlab = 'day', ylab = 'normalized Q (mm/hr)',
+     xlim = c(a,b),ylim = c(100,500),
+     main = paste('discharge for Logan subcatchments -', water.year),type = 'n')
+axis(1, at = seq(a,b, length.out = 8), labels = (wy.df$day[seq(a,b,length.out = 8)]))
+
+for (i in 1:length(plot.cols)){
+  lines(wy.df[,plot.cols[i]], col = linecols[choices[i]], lty = linetypes[choices[i]])
+}
+
+#lines(wy.df$FB_QP*3.6/site.areas[1], col = linecols[1])
+
+
+
+
+legend('right', inset = -0.2, legend = site.choices, lty = linetypes[choices], col = linecols[choices], xpd = T)
+```

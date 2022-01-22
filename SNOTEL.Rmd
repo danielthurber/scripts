@@ -11,18 +11,17 @@ library(naniar)
 library(ggplot2)
 mypath <- 'C:/Users/Daniel/Documents/Research/data/SNOTEL/'
 site <- 'UDD_1098'
-csitename <- "USU Doc Daniel"
+csitename <- "USU Doc Daniel" #common name for plots
 ```
 
 
-
+generate dataframe from .csv
 ```{r}
 snofile <- paste0(site,'.csv')
 snodf <- read.csv(paste0(mypath,snofile), stringsAsFactors = F)
 ```
 
 Add water year, melt, and rain to dataframe
-
 ```{r}
 snodf$Date = as.Date(snodf$Date, format = "%m/%d/%Y")
 
@@ -31,6 +30,7 @@ snodf$WY = ifelse(as.numeric(format(snodf$Date,'%m'))>=10,
                      as.numeric(format(snodf$Date,'%Y'))) #determine water year
 ```
 
+Calculate daily melt and rain columns
 ```{r}
 snodf$melt = 0
 for (i in 1:nrow(snodf)){ #calculate and report daily melt
@@ -50,7 +50,7 @@ startday <- 190
 endday <- 320
 ```
 
-Create dataframe for the wateryear of interest
+Create dataframe for the water year of interest
 ```{r}
 wydf <- data.frame(snodf[which(snodf$WY==WaterYear),])
 wydf$discharge=NA
@@ -85,7 +85,7 @@ mtext("surface water input (in/day)", side = 4, line = 3)
 write.csv(snodf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
 ```
 
-
+--- Experimental code for plotting discharge and SWI
 Incorporate discharge data if desired
 ```{r}
 for (i in 1:nrow(dailyq)){ #this relies on the construction of the dailyq dataframe
@@ -116,10 +116,5 @@ mtext("surface water input (in/day)", side = 4, line = 3)
 #      col = 'cadetblue3')
 ```
 
-```{r}
-ggplot(data = wydf, aes(x = Date, y = SWE_in))
-```
-```{r}
-write.csv(snodf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
-```
+
 

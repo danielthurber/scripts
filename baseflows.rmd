@@ -4,23 +4,54 @@ author: "Daniel Thurber"
 date: "1/4/2022"
 output: pdf_document
 ---
+
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
 library(ggplot2)
 library(naniar)
 library(tidyverse)
 
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
-               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
-               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring')
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
+               'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
+               'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
+              'TS', 'SC', 'WC', 'GC', 'WS','FD')
 i <- 1
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
    #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4', 'tan1')
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,3,1)
 rgbmat <- col2rgb(linecols)
+```
+
+Initialize catchment areas in km^2
+```{r}
+site.areas <- c(65.9767, #FB
+                277.965, #TG
+                103.4015, #BC
+                41.4076, #TF
+                65.1986, #RH
+                NA, #RS
+                8.6085, #TS
+                14.7168, #SC
+                403.874, #WC
+                520.8331, #GC
+                NA, #WS
+                554 #FD
+                )
+```
+
+Take a look at the color palette, adjust if desired
+```{r, fig.height=1.5, fig.width=7}
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+par(mar = c(4,0,0,0))
+image(1:length(linecols),.1, as.matrix(1:length(linecols)), col = linecols, yaxt = 'n', ylab = '', xlab = 'catchment', xaxt = 'n')
+axis(side = 1, at = 1:length(linecols), labels = siteabbr)
 ```
 
 ```{r}
@@ -49,45 +80,137 @@ all.sites$WY = ifelse(as.numeric(format(all.sites$date,'%m'))>=10,
 colnames(all.sites)
 ```
 
+Select water year and variable of interest, restrict dataframe by water year
 ```{r}
-siteabbr <- c('FB', 'TG', 'BC', 'TF','RH',
-               'RS', 'TS', 'SC', 'WC', 'GC', 'WS')
+water.year <- 2019
+variable <- "QP"
+wy.df <- all.sites[which(all.sites$WY==water.year),]
 ```
 
+identify columns to keep (no user input)
 ```{r}
-site.areas <- c(65.9767, #FB
-                277.965, #TG
-                103.4015, #BC
-                41.4076, #TF
-                65.1986, #RH
-                NA, #RS
-                8.6085, #TS
-                14.7168, #SC
-                403.874, #WC
-                520.8331, #GC
-                NA #WS
-                )
+sel.codes <- colnames(wy.df)
+
+date.cols <- which(colnames(wy.df) %in% c('date', 'day', 'wyday','WY'))
+sel.codes[date.cols]
+
+sel.cols <- which(str_sub(sel.codes,4,5)==variable)
+sel.codes[sel.cols]
+paste(length(sel.cols), 'sites')
 ```
 
+Filter dataframe with only selected columns
 ```{r}
-all.sites$date[which(all.sites$wyday==152)]
-```
-```{r}
-FB.base <- na.omit(all.sites$FB_QP[which(all.sites$wyday<153)])/site.areas[1]
-TG.base <- na.omit(all.sites$TG_QP[which(all.sites$wyday<153)])/site.areas[2]
-BC.base <- na.omit(all.sites$BC_QP[which(all.sites$wyday<153)])/site.areas[3]
-TF.base <- na.omit(all.sites$TF_QP[which(all.sites$wyday<153)])/site.areas[4]
-RH.base <- na.omit(all.sites$RH_QP[which(all.sites$wyday<153)])/site.areas[5]
-TS.base <- na.omit(all.sites$TS_QP[which(all.sites$wyday<153)])/site.areas[7]
-SC.base <- na.omit(all.sites$SC_QP[which(all.sites$wyday<153)])/site.areas[8]
-WC.base <- na.omit(all.sites$WC_QP[which(all.sites$wyday<153)])/site.areas[9]
-GC.base <- na.omit(all.sites$GC_QP[which(all.sites$wyday<153)])/site.areas[10]
+wy.df <- wy.df[c(date.cols,sel.cols)]
+head(wy.df)
+date.cols <- NULL
+sel.cols <- NULL
+summary(wy.df)[1,5:ncol(wy.df)]
 
 ```
 
+--- Baseflow distributions (box plots)
 ```{r}
-boxplot(FB.base,BC.base, TF.base, RH.base, TS.base, SC.base, WC.base, GC.base, 
-        xlab = 'catchment', col = linecols, ylab = 'discharge (mm/hr)', main = 'Normalized baseflows')
-axis(side=1, at = seq(1,8), labels = c('FB', 'BC', 'TF', 'RH', 'TS', 'SC', 'WC', 'GC'))
+sel.day <- 153
+wy.df$date[which(wy.df$wyday==sel.day)]
+```
+```{r}
+baseflow.df <- data.frame(
+  FB = (wy.df$FB_QP[which(wy.df$wyday<(sel.day))])*3.6/site.areas[1],
+  TG = (wy.df$TG_QP[which(wy.df$wyday<(sel.day))])/site.areas[2]*3.6,
+  BC = (wy.df$BC_QP[which(wy.df$wyday<(sel.day))])/site.areas[3]*3.6,
+  TF = (wy.df$TF_QP[which(wy.df$wyday<(sel.day))])/site.areas[4]*3.6,
+  RH = (wy.df$RH_QP[which(wy.df$wyday<(sel.day))])/site.areas[5]*3.6,
+  RS = NA,
+  TS = (wy.df$TS_QP[which(wy.df$wyday<(sel.day))])/site.areas[7]*3.6,
+  SC = (wy.df$SC_QP[which(wy.df$wyday<(sel.day))])/site.areas[8]*3.6,
+  WC = (wy.df$WC_QP[which(wy.df$wyday<(sel.day))])/site.areas[9]*3.6,
+  GC = (wy.df$GC_QP[which(wy.df$wyday<(sel.day))])/site.areas[10]*3.6,
+  WS = NA,
+  FD = (wy.df$FD_QP[which(wy.df$wyday<(sel.day))])/site.areas[12]*3.6,
+  date = wy.df$date[which(wy.df$wyday<(sel.day))]
+)
+```
+
+```{r}
+choices <- c(1,2,3,4,5, 7, 8, 9, 10, 12)
+site.choices <- siteabbr[choices]
+
+plot.cols <- which(substr(colnames(wy.df),1,2) %in% site.choices)
+
+na.check = rep(NA,length(plot.cols))
+for(i in 1:length(plot.cols)){
+  na.check[i] <- sum(is.na(wy.df[,plot.cols[i]]))
+}
+
+data.frame('sites'=site.choices,'ID' = choices, 'column' = plot.cols, 'NA_count' = na.check)
+
+```
+```{r}
+boxplot(baseflow.df[,choices], 
+        xlab = 'catchment', col = linecols[choices], ylab = 'discharge (mm/hr)', 
+#        ylim = c(0,0.2),
+        main = paste('Normalized baseflows', water.year))
+axis(side=1, at = 1:length(choices), labels = siteabbr[choices])
+```
+
+
+```{r}
+apply(baseflow.df[,choices],2,FUN = median, na.rm = T)
+```
+
+
+
+
+
+--- compare baseflow ranges to HI
+```{r}
+#catch.compare <- data.frame(
+#  catchment = c('FB', 'TG', 'BC', 'TF','RH', 'RS', 'TS', 'SC', 'WC', 'GC', 'WS','FD'),
+#  site.i <- c(1:12),
+#  HI = c(0.473, 0.502, 0.519, 0.491, 0.564, NA, 0.566, 0.514, 0.542, 0.519, NA, NA)
+#)
+```
+
+```{r}
+bf.iqr <- as.data.frame(apply(baseflow.df[,choices],2,FUN = IQR, na.rm = T))
+bf.iqr$catchment = row.names(bf.iqr)
+colnames(bf.iqr)[1]= paste0('bf.iqr.', substr(as.character(water.year),3,4))
+bf.iqr
+```
+```{r}
+new.col.name <- paste0('bfr.', substr(as.character(water.year),3,4))
+new.col.name
+new.col.name %in% colnames(catch.compare)
+```
+
+```{r}
+for (i in 1:nrow(catch.compare)){
+  if (catch.compare$catchment[i] %in% bf.iqr$catchment){
+  catch.compare[i,new.col.name] <- bf.iqr[which(bf.iqr$catchment==new.catch$catchment[i]),1]
+  }
+}
+catch.compare
+new.col.name <- NULL
+```
+
+
+```{r}
+write.csv(catch.compare, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/baseflow_IQR.csv'), row.names = F)
+```
+
+```{r}
+choices <- c(1,2,3,4,5,7,8,9,10)
+site.choices <- siteabbr[choices]
+```
+
+```{r}
+par(mar = c(4,4,4,6))
+plot(catch.compare$bfr.20~catch.compare$HI, col = linecols, pch = 19, 
+     main = 'baseflow range described by elevation distribution (HI)',xlab = "Hypsometric Integral", ylab = 'baseflow IQR')
+points(catch.compare$bfr.19~catch.compare$HI, col = linecols, pch = 15)
+points(catch.compare$bfr.18~catch.compare$HI, col = linecols, pch = 17)
+points(catch.compare$bfr.17~catch.compare$HI, col = linecols, pch = 18)
+legend('right', inset = -0.2, legend = c(site.choices,'2020', '2019','2018','2017'), pch = c(rep(19,9),19,15,17,18), col = c(linecols[choices], rep('black', times = 4)), xpd = T)
 ```
 
