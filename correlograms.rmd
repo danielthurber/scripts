@@ -30,8 +30,8 @@ This script relies on the .csv files produced from LRO_aquatic, patching, and
 
 Identify LRO site number and SNOTEL site name
 ```{r}
-i <- 1
-snofile <- 'KN_1115.csv'
+i <- 3
+snofile <- 'GCS_1114.csv'
 #FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]       #enter site name for plotting
@@ -52,6 +52,32 @@ snodf$Date = as.Date(snodf$Date, format = '%Y-%m-%d')
 mindate <- qtc$date[1]
 ```
 
+```{r}
+
+qtc$date <- as.Date(qtc$date,'%Y-%m-%d')
+qtc$day <- format(as.Date(qtc$date),'%m-%d')
+qtc$wyday <- 0
+qtc$WY = ifelse(as.numeric(format(qtc$date,'%m'))>=10, 
+                     as.numeric(format(qtc$date,'%Y'))+1, 
+                     as.numeric(format(qtc$date,'%Y')))
+head(qtc,3)
+```
+
+create a reference dataframe relating water year days to month-day format
+```{r}
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+```
+
+
+Populate water year day column with appropriate values 1-366
+```{r}
+for (i in 1:nrow(qtc)){
+  qtc$wyday[i] <- wydates$wyday[which(wydates$day==qtc$day[i])]
+}
+head(qtc,3)
+```
+--- Activate this section to correlate to a different SNOTEL station using snodf
 Make a simplified dataframe of SWI and date only
 ```{r}
 swi.df <- data.frame(date = snodf$Date, SWI = snodf$melt+snodf$rain)
@@ -59,12 +85,17 @@ head(swi.df)
 head(snodf)
 ```
 ```{r}
-crossdf <- merge(x = swi.df, y = qtc, by = intersect('date', 'date'))
+#crossdf <- merge(x = swi.df, y = qtc, by = intersect('date', 'date'))
 paste(nrow(crossdf), 'observations merged')
 ```
 
 
 
+---
+```{r}
+crossdf <- qtc
+
+```
 
 Plot conductance and discharge with data holes highlighted with blue lines on a user-decided date
 ```{r}
@@ -83,6 +114,8 @@ abline(v = which(is.na(crossdf$discharge)), col = 'darkseagreen3')
 abline(v = qholes, col = 'red')
 abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
 
+plot(crossdf$SWI, type = 'l', ylab = 'SWI', main = paste('surface water input at', sitename))
+abline(v = which(format(crossdf$date,'%m-%d')==date.mark), col='goldenrod')
 ```
 ```{r}
 which(format(crossdf$date,'%m-%d')=='08-15')
@@ -91,7 +124,7 @@ which(format(crossdf$date,'%m-%d')=='02-15')
 ```
 *optional - check that a given index correctly corresponds to the desired date
 ```{r}
-i.check <- 960
+i.check <- 1369
 crossdf$date[i.check]
 ```
 
@@ -103,10 +136,10 @@ a <- study.int[1]  #index of starting time
 b <- study.int[2]   #index of ending time based on study interval
 
 
-win1 <- c(230,450)  #red rect for 2015
-win2 <- c(620,820)  #yellow rect for 2016
-win3 <- c(960,1175)  #green rect for 2017
-win4 <- c(1350,1550)   #gray rect for 2018
+win1 <- c(248,463)  #red rect for 2015
+win2 <- c(620,830)  #yellow rect for 2016
+win3 <- c(1,1)  #green rect for 2017
+win4 <- c(1369,1579)   #gray rect for 2018
 win5 <- c()
 win6 <- c()
 win7 <- c()
@@ -172,38 +205,69 @@ win.names
 ```
 
 
-Compute CCF of Q | SWIT within each window.
+Compute CCF of C | Q within each window.
 ```{r}
 lagmax <- 150
-ccf1 <- ccf(crossdf$qpatch[win1[1]:win1[2]], crossdf$SWIT[win1[1]:win1[2]], lag.max = lagmax, 
+ccf1 <- ccf(crossdf$cpatch[win1[1]:win1[2]], crossdf$qpatch[win1[1]:win1[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
-ccf2 <- ccf(crossdf$qpatch[win2[1]:win2[2]], crossdf$SWIT[win2[1]:win2[2]], lag.max = lagmax, 
+ccf2 <- ccf(crossdf$cpatch[win2[1]:win2[2]], crossdf$qpatch[win2[1]:win2[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
-ccf3 <- ccf(crossdf$qpatch[win3[1]:win3[2]], crossdf$SWIT[win3[1]:win3[2]], lag.max = lagmax, 
+ccf3 <- ccf(crossdf$cpatch[win3[1]:win3[2]], crossdf$qpatch[win3[1]:win3[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
-ccf4 <- ccf(crossdf$qpatch[win4[1]:win4[2]], crossdf$SWIT[win4[1]:win4[2]], lag.max = lagmax, 
+ccf4 <- ccf(crossdf$cpatch[win4[1]:win4[2]], crossdf$qpatch[win4[1]:win4[2]], lag.max = lagmax, 
              plot = F, na.action = na.pass)
 
 ```
 
 ```{r}
-years <- c(2,3,4)
-plot(ccf1$lag, ccf1$acf, col=linecols[1],
+years <- c(1,2,4)
+plot(ccf1$lag, -ccf1$acf, col=linecols[1],
      ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.9), xlim = c(0,50), 
-     main = paste('Q|SWIT Crosscorrelation by water year:', sitename),
+     main = paste('C|Q Crosscorrelation by water year:', sitename),
      type = 'n', #change to 'n' to hide, 'l' to show
      )
-lines(ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
-lines(ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
-lines(ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
+lines(-ccf1$acf[(lagmax+2):(lagmax*2+1)], col = linecols[1],xlim = c(0,lagmax))
+lines(-ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
+lines(-ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
+lines(-ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
 
 abline(h = 0.2, lty = 3)
 abline(h = -0.2, lty = 3)
 
 legend('bottomleft', legend = win.names[years], lty = 1, col = linecols[years]) 
 ```
+cross correlation of discharge to snotel SWI
+```{r}
+lagmax <- 150
+ccf1 <- ccf(crossdf$qpatch[win1[1]:win1[2]], crossdf$SWI[win1[1]:win1[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf2 <- ccf(crossdf$qpatch[win2[1]:win2[2]], crossdf$SWI[win2[1]:win2[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf3 <- ccf(crossdf$qpatch[win3[1]:win3[2]], crossdf$SWI[win3[1]:win3[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+ccf4 <- ccf(crossdf$qpatch[win4[1]:win4[2]], crossdf$SWI[win4[1]:win4[2]], lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+
+```
 
 
+```{r}
+years <- c(1,2,4)
+plot(ccf1$lag, -ccf1$acf, col=linecols[1],
+     ylab = 'Correlation', xlab = 'Lag (days)', ylim = c(-0.2,0.9), xlim = c(0,50), 
+     main = paste('Q|SWI Crosscorrelation by water year:', sitename),
+     type = 'n', #change to 'n' to hide, 'l' to show
+     )
+lines(-ccf1$acf[(lagmax+2):(lagmax*2+1)], col = linecols[1],xlim = c(0,lagmax))
+lines(-ccf2$acf[(lagmax+2):(lagmax*2+1)], col = linecols[2],xlim = c(0,lagmax))
+lines(-ccf3$acf[(lagmax+2):(lagmax*2+1)], col = linecols[3],xlim = c(0,lagmax))
+lines(-ccf4$acf[(lagmax+2):(lagmax*2+1)], col = linecols[4])
+
+abline(h = 0.2, lty = 3)
+abline(h = -0.2, lty = 3)
+
+legend('topright', legend = win.names[years], lty = 1, col = linecols[years]) 
+```
 
 
 ### This section generates and plots CCF functions from SNOTEL data over the entire period of record

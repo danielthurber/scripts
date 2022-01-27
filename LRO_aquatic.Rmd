@@ -9,12 +9,12 @@ Input the name of the file within the designated folder and read the csv into a 
 ```{r}
 library(naniar)
 library(ggplot2)
-mypath <- 'C:/Users/Daniel/Documents/Research/data/LRO_aquatic/' #leave this directory alone!
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
-               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
-               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <-11
+mypath <- 'C:/Users/Daniel/Documents/Research/data/new_LRO_aquatic/' #leave this directory alone!
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A','RS_CONF_A',
+                'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
+               'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring', 'First Dam')
+i <-1
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
@@ -63,6 +63,7 @@ plot(tdf$Value, type = 'l', main = paste('temp at', sitename), ylab = 'temp', yl
 
 
 Add column for date and discharge/conductance/temperature, replace all low values with NA
+USER: check for reasonable threshold levels.  They should be rather extreme/impossible
 ```{r}
 minQ <- 0.00001                     #below these thresholds, values will be replaced with NA
 minT <- -1
@@ -97,6 +98,7 @@ plot(qdf$discharge, type = "l", xlab = 'Date', ylab = 'Discharge')
 plot(cdf$conductance~cdf$date, type = "l", xlab = "Date", ylab = "Specific Conductance")
 plot(tdf$temperature~tdf$date, type = "l", xlab = 'Date', ylab = 'Temperature')
 ```
+--- next chunks can replace or remove remaining spikes if desired
 zoom in on a specific time window - conductance
 ```{r}
 a <- 70000     #window starting index from plot above
@@ -110,12 +112,14 @@ axis(1, at = seq(1,c, length.out = 6), labels = (qdf$date[seq(a,b,length.out = 6
 plot(cdf$conductance, type = "l", xlim = c(a,b), ylim = c(min(cdf$conductance[a:b], na.rm= T),max(cdf$conductance[a:b], na.rm=T)),
      ylab = 'Conductance', main = paste('Conductance at', site))
 ```
-replace an individual value - conductance
+
+
+replace an individual conductance value with the previous value
 ```{r}
-spike.ind <- 
-cdf$conductance[spike.ind]
-cdf$conductance[spike.ind] <- cdf$conductance[spike.ind-1]
-cdf$conductance[spike.ind]
+#spike.ind <- 
+#cdf$conductance[spike.ind]
+#cdf$conductance[spike.ind] <- cdf$conductance[spike.ind-1]
+#cdf$conductance[spike.ind]
 
 ```
 
@@ -132,6 +136,7 @@ plot(qdf$discharge, type = "l", xlim = c(a,b), ylim = c(min(qdf$discharge[a:b], 
      ylab = 'Discharge', main = paste('Discharge at', site))
 ```
 
+---
 Calculate daily mean for each variable.  NA values are ignored.
 ```{r}
 dailyq <- aggregate(discharge~date, qdf, FUN = "mean", na.rm = T)
@@ -187,6 +192,24 @@ qtcdf$WY = ifelse(as.numeric(format(qtcdf$date,'%m'))>=10,
                      as.numeric(format(qtcdf$date,'%Y'))) #determine water year
 ```
 
+```{r}
+qtcdf$day <- format(as.Date(qtcdf$date),'%m-%d')
+qtcdf$wyday <- 0
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+head(qtcdf,3)
+```
+
+
+Populate water year day column with appropriate values 1-366
+```{r}
+for (i in 1:nrow(qtcdf)){
+  qtcdf$wyday[i] <- wydates$wyday[which(wydates$day==qtcdf$day[i])]
+}
+head(qtcdf,3)
+```
+
+
 Plot all time series and look for any issues worth addressing
 ```{r}
 day1 <- 1
@@ -205,9 +228,9 @@ plot(qtcdf$date[day1:dayend],qtcdf$conductance[day1:dayend], type = 'l', col = '
 ```
 
 
-
+double check the destination for the daily data, then save this dataframe
 ```{r}
-write.csv(qtcdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'.csv'), row.names = F)
+write.csv(qtcdf, paste0('C:/Users/Daniel/Documents/Research/data/new_LRO_aquatic/',site,'.csv'), row.names = F)
 ```
 
 

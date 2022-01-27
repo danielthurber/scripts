@@ -17,7 +17,7 @@ sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'R
                'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
 siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
               'TS', 'SC', 'WC', 'GC', 'WS','FD')
-i <- 5
+i <- 1
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])

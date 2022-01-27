@@ -4,31 +4,254 @@ author: "Daniel Thurber"
 date: "7/2/2021"
 output: pdf_document
 ---
+initialize the session
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
-library(ggplot2)
 library(naniar)
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
-               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
-               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring')
-i <- 2
+library(snotelr)
 
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
+               'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
+               'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
+              'TS', 'SC', 'WC', 'GC', 'WS','FD')
+
+sitesnotel <- c(1115, 1115, 1114,1013,1013, 823, 
+              1013, 1098, 1113, 1113, 823,1098)
+#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
+
+
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,4,1)
+rgbmat <- col2rgb(linecols)
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+```
+
+
+
+Select a site by index number
+```{r}
+i <- 4
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
-#color vector gets used by other plotting scripts.  Attempt to maintain any changes made to the palette
+snosite <- sitesnotel[i]
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
 ```
 
-### run patching protocol for a selected site
+### open and append dataframe for a selected site
 If you are re-opening a previously patched file, do so with this chunk
 ```{r}
 crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+range(crossdf$date)
+colnames(crossdf)
+nrow(crossdf)
+```
+
+
+---Add a water year columns to the dataframe as needed
+```{r}
+crossdf$WY = ifelse(as.numeric(format(crossdf$date,'%m'))>=10, 
+                     as.numeric(format(crossdf$date,'%Y'))+1, 
+                     as.numeric(format(crossdf$date,'%Y'))) #determine water year
+```
+
+```{r}
+crossdf$day <- format(as.Date(crossdf$date),'%m-%d')
+crossdf$wyday <- 0
+head(crossdf[tail(colnames(crossdf))],3)
 
 ```
 
+Populate water year day column with appropriate values 1-366
+```{r}
+for (i in 1:nrow(crossdf)){
+  crossdf$wyday[i] <- wydates$wyday[which(wydates$day==crossdf$day[i])]
+}
+head(crossdf[tail(colnames(crossdf))],3)
+```
+
+
+--- visualize and continue
+```{r}
+plot(crossdf$qpatch, type = 'l')
+```
+
+
+---Trim end of dataframe
+
+select an index range (based on plot above) and see if the interval looks good
+```{r}
+keep.rows <- 1:nrow(crossdf)
+#keep.rows <- 1:2380 #uncomment to keep all
+plot(crossdf$cpatch[keep.rows], type = 'l')
+plot(crossdf$qpatch[keep.rows], type = 'l', xlim = range(keep.rows))
+abline(v = which(is.na(crossdf$qpatch[keep.rows])), col = 'red')
+
+```
+
+Trim the dataframe and plot result.  Unpatched values are indicated.
+```{r}
+new.cross <- crossdf[keep.rows,]
+plot(new.cross$qpatch, type = 'l')
+abline(v = which(is.na(new.cross$qpatch)), col = 'red')
+
+```
+
+
+--- prepare new data to append
+
+Open updated data and compare range to existing patched data
+```{r}
+new.data <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/new_LRO_aquatic/',site,'.csv'))
+new.data$date <- as.Date(new.data$date,'%Y-%m-%d')
+paste('patched data range:')
+range(new.cross$date)
+paste('new data range:')
+range(new.data$date)
+
+```
+
+Compare patched data to new observations
+```{r}
+plot(new.data$discharge, type = 'l')
+lines(new.cross$qpatch, type = 'l', col = 'cadetblue2') #will only overlap if start dates line up
+```
+
+identify end of current data.  Appending will start here
+```{r}
+cross.start <- new.cross$date[1]
+cross.end <- new.cross$date[nrow(new.cross)]
+cross.end
+```
+
+create data to append, sync column names (temp, cpatch, qpatch)
+```{r}
+append.df <- new.data[which(new.data$date>cross.end),]
+range(append.df$date)
+colnames(append.df)
+colnames(append.df)[which(colnames(append.df) == 'temperature')] <- 'temp'
+append.df$cpatch <- append.df$conductance
+append.df$qpatch <- append.df$discharge
+colnames(append.df)
+```
+
+check for present/missing columns.  all columns from append should be in new.cross
+```{r}
+data.frame('column name' = colnames(new.cross),
+'in_append.df' = colnames(new.cross) %in% colnames(append.df))
+
+data.frame('column name' = colnames(append.df),
+'in_new.cross' = colnames(append.df) %in% colnames(new.cross))
+```
+
+
+--- add missing data for snotel
+```{r}
+snodf <- snotel_download(site_id = snosite, internal = T)
+snosite.meta <- snodf[1,]
+snosite.meta
+```
+
+Keep and rename relevant variables
+```{r}
+snodf <- data.frame(date = snodf$date,
+                  SWE_mm = snodf$snow_water_equivalent,
+                  precip_mm = snodf$precipitation)
+snodf$date <- as.Date(snodf$date,'%Y-%m-%d')
+head(snodf,3)
+```
+
+
+Add water year info
+```{r}
+snodf$day <- format(as.Date(snodf$date),'%m-%d')
+
+for (i in 1:nrow(snodf)){
+  snodf$wyday[i] <- wydates$wyday[which(wydates$day==snodf$day[i])]
+}
+snodf$WY = ifelse(as.numeric(format(snodf$date,'%m'))>=10, 
+                     as.numeric(format(snodf$date,'%Y'))+1, 
+                     as.numeric(format(snodf$date,'%Y'))) #determine water year
+head(snodf,3)
+```
+
+generate columns for rain and melt based on precip and SWE changes.
+```{r}
+snodf$melt = 0
+for (i in 1:nrow(snodf)){ #calculate and report daily melt
+  snodf$melt[i] = max(0,snodf$SWE_mm[i-1]-snodf$SWE_mm[i]) 
+}
+snodf$rain=0
+for (i in 1:nrow(snodf)){ #calculate and report daily rain
+  snodf$rain[i] = round(max(0,snodf$precip_mm[i]-max(0,snodf$SWE_mm[i+1]+snodf$SWE_mm[i])),2) 
+}
+snodf$swi=snodf$melt+snodf$rain
+```
+
+list the most recent rows with NA data
+```{r}
+pholes <- which(is.na(snodf$precip))
+sholes <- which(is.na(snodf$SWE))
+tail(pholes)
+tail(sholes)
+```
+
+keep only relevant new variables
+```{r}
+snodf <- snodf[c('date','melt','rain','swi')]
+colnames(snodf)[4] <- 'SWI'
+head(snodf,3)
+```
+
+add snow data to data for appending
+```{r}
+append.df <- merge(x = append.df, y = snodf, by = 'date')
+```
+
+
+
+--- actually append dataframe
+identify and indicate missing columns
+```{r}
+missing.cols <- colnames(new.cross)[which(colnames(new.cross) %in% colnames(append.df)==F)]
+missing.cols
+```
+add blank columns to enable append
+```{r}
+append.df[,missing.cols]=NA
+
+head(append.df[tail(colnames(append.df))],3)
+```
+
+combine and check column names match with new.cross, but not append.df
+```{r}
+crossdf <- rbind(new.cross,append.df)
+colnames(crossdf)==colnames(new.cross)
+colnames(append.df)==colnames(new.cross)
+```
+
+check that values match from append.df to crossdf
+```{r}
+tail(crossdf[colnames(crossdf)])==tail(append.df[colnames(crossdf)])
+```
+
+```{r}
+qholes <- which(is.na(crossdf$qpatch))
+mholes <- which(is.na(crossdf$melt))
+choles <- which(is.na(crossdf$cpatch))
+
+```
+
+
+
+--- original code for adding snotel data
 Begin by running SNOTEL and LRO_aquatic scripts to generate the qtc and snodf dataframes as .csv files.  This chunk will re-open them.
 
 ```{r}
@@ -63,25 +286,18 @@ crossdf$qpatch <- crossdf$discharge
 ```
 
 
-
+---
 
 
 ```{r}
-qholes <- which(is.na(crossdf$qpatch))
-mholes <- which(is.na(crossdf$melt))
-choles <- which(is.na(crossdf$cpatch))
-
-```
-
-```{r}
-paste('discharge:') 
+paste('missing discharge:') 
 qholes
-paste('conductance:')
+paste('missing conductance:')
 choles
 
 ```
 
--------------  Patching Cycle starts here ----------
+###Patching Cycle starts here ----------
 Generate plots 
 ```{r}
 plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Discharge at', sitename))
@@ -345,7 +561,7 @@ qholes[1:50]
 ```
 
 
-Save the dataframe for continuation later
+###Save the dataframe for continuation later
 ```{r}
 write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'), row.names = F)
 ```
