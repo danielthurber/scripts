@@ -4,12 +4,10 @@ author: "Daniel Thurber"
 date: "1/18/2021"
 output: pdf_document
 ---
-
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
-library(ggplot2)
 library(naniar)
-library(tidyverse)
+library(snotelr)
 
 sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
                'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
@@ -17,15 +15,32 @@ sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'R
                'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
 siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
               'TS', 'SC', 'WC', 'GC', 'WS','FD')
+
+sitesnotel <- c(1115, 1115, 1114,1013,1013, 823, 
+              1013, 1098, 1113, 1113, 823,1098)
+#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
+
+acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
+acf.years <- c('15','16','17','18','19','20','21')
+
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,4,1)
+rgbmat <- col2rgb(linecols)/255
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+```
+
+
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+
 i <- 1
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
    #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
-              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
-linetypes <- c(1,1,1,1,1,3,1,1,1,1,4,1)
-rgbmat <- col2rgb(linecols)
+
 ```
 
 Initialize catchment areas in km^2
@@ -217,7 +232,7 @@ mtext("discharge", side = 4, line = 3)
 
 ### plot water year discharge SWIT together
 ```{r}
-i <- 5
+i <- 1
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -240,7 +255,7 @@ plot(crossdf$SWIT~crossdf$date, type = 'l')
 ```
 
 
-Generate a dataframe for a selected year, caculate total SWIT for that year
+Generate a dataframe for a selected year, calculate total SWIT for that year
 ```{r}
 wateryear <- 2018
 wydf <- crossdf[which(crossdf$WY==wateryear),]
@@ -309,7 +324,7 @@ axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 
 
 ```
 
-### plot aquatic variable for multiple sites within a selected water year
+### plot aquatic variables for multiple sites within a selected water year
 --- import, prepare, and filter dataframe for all sites
 ```{r}
 all.sites <-  read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO_sites.csv')

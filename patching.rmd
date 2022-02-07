@@ -21,6 +21,8 @@ sitesnotel <- c(1115, 1115, 1114,1013,1013, 823,
               1013, 1098, 1113, 1113, 823,1098)
 #FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 
+acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
+acf.years <- c('15','16','17','18','19','20','21')
 
 linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
               'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
@@ -34,7 +36,7 @@ day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-
 
 Select a site by index number
 ```{r}
-i <- 4
+i <- 1
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
 paste('Site:', sitecodes[i], '-', sitenames[i])
@@ -49,6 +51,8 @@ If you are re-opening a previously patched file, do so with this chunk
 ```{r}
 crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+#crossdf$date <- as.Date(crossdf$date,'%m/%d/%Y')
+
 range(crossdf$date)
 colnames(crossdf)
 nrow(crossdf)
@@ -80,26 +84,40 @@ head(crossdf[tail(colnames(crossdf))],3)
 
 --- visualize and continue
 ```{r}
-plot(crossdf$qpatch, type = 'l')
+plot(crossdf$cpatch, type = 'l', main = paste('patched conductance at',sitename))
+
+plot(crossdf$qpatch, type = 'l', main = paste('patched discharge at',sitename))
+
 ```
 
 
 ---Trim end of dataframe
+Look at specific values and the first positions of NA values
+```{r}
+a <- 2400
+b <- 2500
+crossdf$qpatch[a:b]
+head(which(is.na(crossdf$qpatch)))
+```
 
-select an index range (based on plot above) and see if the interval looks good
+select an index range (based on plot above) and see if the interval looks good.  Red lines are drawn on NA values
 ```{r}
 keep.rows <- 1:nrow(crossdf)
-#keep.rows <- 1:2380 #uncomment to keep all
-plot(crossdf$cpatch[keep.rows], type = 'l')
-plot(crossdf$qpatch[keep.rows], type = 'l', xlim = range(keep.rows))
+keep.rows <- 1:2387 #comment out to keep all
+plot(crossdf$cpatch[keep.rows], type = 'l', ylab = 'conductance',
+     main = paste(sum(is.na(crossdf$cpatch[keep.rows])),'missing conductance values'))
+abline(v = which(is.na(crossdf$cpatch[keep.rows])), col = 'red')
+
+plot(crossdf$qpatch[keep.rows], type = 'l', xlim = range(keep.rows), ylab = 'discharge',
+     main = paste(sum(is.na(crossdf$qpatch[keep.rows])),'missing discharge values'))
 abline(v = which(is.na(crossdf$qpatch[keep.rows])), col = 'red')
 
 ```
 
-Trim the dataframe and plot result.  Unpatched values are indicated.
+Trim the dataframe and plot result.  Unpatched values are indicated by red lines.
 ```{r}
 new.cross <- crossdf[keep.rows,]
-plot(new.cross$qpatch, type = 'l')
+plot(new.cross$qpatch, type = 'l', main = paste('discharge at', sitename))
 abline(v = which(is.na(new.cross$qpatch)), col = 'red')
 
 ```
@@ -120,8 +138,9 @@ range(new.data$date)
 
 Compare patched data to new observations
 ```{r}
-plot(new.data$discharge, type = 'l')
+plot(new.data$discharge, type = 'l', main = paste('Discharge at', sitename), ylab = 'discharge')
 lines(new.cross$qpatch, type = 'l', col = 'cadetblue2') #will only overlap if start dates line up
+legend('topright', col = c( 'cadet blue2','black'),lty = 1, legend = c('downladed May \'21','downloaded Jan \'22'))
 ```
 
 identify end of current data.  Appending will start here
@@ -142,7 +161,7 @@ append.df$qpatch <- append.df$discharge
 colnames(append.df)
 ```
 
-check for present/missing columns.  all columns from append should be in new.cross
+check for present/missing columns.  all columns from append should be in new.cross, append should be missing melt, rain, and SWI
 ```{r}
 data.frame('column name' = colnames(new.cross),
 'in_append.df' = colnames(new.cross) %in% colnames(append.df))
@@ -209,6 +228,14 @@ snodf <- snodf[c('date','melt','rain','swi')]
 colnames(snodf)[4] <- 'SWI'
 head(snodf,3)
 ```
+Make a quick plot of the final 365 observations, making sure rain, melt, and SWI have values
+```{r}
+plot(tail(snodf$SWI,365), type = 'l', lwd = 2)
+lines(tail(snodf$rain,365), col = linecols[1])
+lines(tail(snodf$melt,365), col = linecols[2])
+legend('topright', legend = c('rain', 'melt'), lty = 1, col = linecols[1:2])
+```
+
 
 add snow data to data for appending
 ```{r}
@@ -218,12 +245,12 @@ append.df <- merge(x = append.df, y = snodf, by = 'date')
 
 
 --- actually append dataframe
-identify and indicate missing columns
+identify and indicate missing columns (should output "character (0)")
 ```{r}
 missing.cols <- colnames(new.cross)[which(colnames(new.cross) %in% colnames(append.df)==F)]
 missing.cols
 ```
-add blank columns to enable append
+add blank columns to enable append (typically unnecessary)
 ```{r}
 append.df[,missing.cols]=NA
 
@@ -242,13 +269,10 @@ check that values match from append.df to crossdf
 tail(crossdf[colnames(crossdf)])==tail(append.df[colnames(crossdf)])
 ```
 
+save updated dataframe
 ```{r}
-qholes <- which(is.na(crossdf$qpatch))
-mholes <- which(is.na(crossdf$melt))
-choles <- which(is.na(crossdf$cpatch))
-
+write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'), row.names = F)
 ```
-
 
 
 --- original code for adding snotel data
@@ -287,6 +311,13 @@ crossdf$qpatch <- crossdf$discharge
 
 
 ---
+
+```{r}
+qholes <- which(is.na(crossdf$qpatch))
+mholes <- which(is.na(crossdf$melt))
+choles <- which(is.na(crossdf$cpatch))
+
+```
 
 
 ```{r}
@@ -342,7 +373,7 @@ Zoom in on a section of the conductance plot worth patching
 
 
 ```{r}
-patch.int <- c(1725, 1735)
+patch.int <- c(2130, 2185)
 
 #patch.rng <- range(crossdf$cpatch[patch.int[1]:patch.int[2]], na.rm = T)
 #choles
@@ -384,6 +415,10 @@ patchvals <- runif(i2-i1+1,patch.rng[1], patch.rng[2])
 crossdf$cpatch[choles[i1]:choles[i2]] = patchvals
 i1 <- NA
 i2 <- NA
+plot(crossdf$cpatch, xlim=patch.int, type= 'l', ylab = 'conductance', 
+     main = paste('conductance at', sitename), col = 'seagreen2')
+lines(crossdf$conductance, xlim=patch.int)
+
 ```
 
 Generate and insert a linear patch
@@ -394,15 +429,13 @@ patchvals <- seq(crossdf$cpatch[choles[i1]-1],
 crossdf$cpatch[(choles[i1]-1):(choles[i2]+1)] = patchvals
 i1 <- NA
 i2 <- NA
-```
-
-check the patch
-```{r}
 plot(crossdf$cpatch, xlim=patch.int, type= 'l', ylab = 'conductance', 
-     main = sitename, col = 'seagreen2')
+     main = paste('conductance at', sitename), col = 'seagreen2')
 lines(crossdf$conductance, xlim=patch.int)
 
 ```
+
+
 If there was a problem, set up this chunk to undo it (set indices to replace cpatch):
 ```{r}
 j <- patch.int[1]
@@ -452,10 +485,10 @@ which(format(crossdf$date,'%m-%d')=='03-15')
 ```
 
 
-Zoom in on a section of the discharge plot worth patching
+Zoom in on a section of the discharge plot worth patching.  This chunk includes a protocol that can be used to replace spikes from ice damming with NA if necessary
 
 ```{r}
-patch.int <- c(2385,2395)
+patch.int <- c(995,1013)
 na.thresh <- 01
 
 patch.rng <- range(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)
@@ -465,9 +498,9 @@ plot(crossdf$qpatch, xlim=patch.int, ylim = c(0,max(crossdf$qpatch[patch.int[1]:
      type= 'l', main = paste(sitename,'centered at',crossdf$date[mean(patch.int)]), 
      ylab = 'discharge', col = 'seagreen2')
 abline(v = qholes, col = 'red')
-abline(h = na.thresh, lty = 3)
-#lines(crossdf$discharge)
-abline(v = frozen, col = 'goldenrod')
+#abline(h = na.thresh, lty = 3)
+lines(crossdf$discharge)
+#abline(v = frozen, col = 'goldenrod')
 ```
 
 --- the next two chunks remove original values exceeding the threshold defined above
@@ -484,6 +517,7 @@ crossdf$qpatch[frozen] <- NA
 qholes <- which(is.na(crossdf$qpatch))
 
 ```
+
 --- for single patches, enter the index (in console) to interpolate
 ```{r}
 spike <- as.integer(readline(prompt = "Enter index to patch:")) #enter prompt in console
@@ -512,6 +546,17 @@ patchvals <- runif(i2-i1+1,patch.rng[1], patch.rng[2])
 crossdf$qpatch[qholes[i1]:qholes[i2]] = patchvals
 i1 <- NA
 i2 <- NA
+plot(crossdf$qpatch, xlim=patch.int, type= 'l', ylab = 'Discharge', main = sitename, 
+     ylim = c(0,max(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)), col = 'seagreen2', xlab = 'date', xaxt = 'n')
+lines(crossdf$discharge, xlim=patch.int)
+axis(1, at = seq(patch.int[1], patch.int[2], length.out = 6), 
+     labels = (crossdf$date[seq(patch.int[1], patch.int[2],length.out = 6)]))
+
+
+plot(crossdf$qpatch, xlim=patch.int, type= 'l', ylab = 'Discharge', 
+     main = sitename, ylim = c(0,max(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)), col = 'seagreen2')
+lines(crossdf$discharge, xlim=patch.int)
+
 ```
 
 
@@ -525,12 +570,6 @@ patchvals <- seq(crossdf$qpatch[qholes[i1]-1],
 crossdf$qpatch[(qholes[i1]-1):(qholes[i2]+1)] = patchvals
 i1 <- NA
 i2 <- NA
-```
-
-
-
-check the patch
-```{r}
 plot(crossdf$qpatch, xlim=patch.int, type= 'l', ylab = 'Discharge', main = sitename, 
      ylim = c(0,max(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)), col = 'seagreen2', xlab = 'date', xaxt = 'n')
 lines(crossdf$discharge, xlim=patch.int)
@@ -543,6 +582,9 @@ plot(crossdf$qpatch, xlim=patch.int, type= 'l', ylab = 'Discharge',
 lines(crossdf$discharge, xlim=patch.int)
 
 ```
+
+
+
 If there was a problem, try running this chunk to undo it (set a range over which to restore original values)
 ```{r}
 j <- 
@@ -556,7 +598,7 @@ crossdf$qpatch[j:k]=crossdf$discharge[j:k]
 If it looks good, reset the qholes vector
 ```{r}
 qholes <- which(is.na(crossdf$qpatch))
-qholes[1:50]
+qholes[1:70]
 
 ```
 
@@ -567,22 +609,6 @@ write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/pa
 ```
 
 ---
-
------------Consider an exponential regression model
-Create vectors of the values within the patch interval on which to evaluate a regression model
-```{r}
-reg.vals <- crossdf$qpatch[patch.int[1]:patch.int[2]]
-reg.ind <- seq(length.out = length(reg.vals))
-```
-
-plot the log-transformed values and a fitted linear model and consider the validity of an exponential patch
-```{r}
-patch.mod <- lm(log(reg.vals)~reg.ind)
-plot(log(reg.vals)~reg.ind)
-abline(patch.mod$coefficients)
-(patch.mod)
-```
- 
 
 
 ```{r}
