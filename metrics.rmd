@@ -4,40 +4,238 @@ author: "Daniel Thurber"
 date: "8/10/2021"
 output: pdf_document
 ---
+initialize the session
 ```{r}
 mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
-library(ggplot2)
 library(naniar)
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
-               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
-               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-siteareas <- c(65976700, 277965000, 103401500, 41407600, 65198600, 
-               NA, 8606500, 14716800, 403874000, 520833100)
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+library(snotelr)
+library(stringr)
+
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
+               'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
+               'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
+              'TS', 'SC', 'WC', 'GC', 'WS','FD')
+
+sitesnotel <- c(1115, 1115, 1114,1013,1013, 823, 
+              1013, 1098, 1113, 1113, 823,1098)
+#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
+
+acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
+acf.years <- c('15','16','17','18','19','20','21')
+
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,4,1)
+rgbmat <- col2rgb(linecols)
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+comp.df <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'))
+colnames(comp.df)[4:171] <- str_sub(colnames(comp.df)[4:171],-6,-1) #make sure column names are only the last 6 characters
+row.names(comp.df) <- sitecodes
+data.frame(A=row.names(comp.df),B=comp.df[,'site_name'])==data.frame(A=sitecodes, B = sitenames)#verify that row names match up
+head(comp.df,3)
+```
+
+Manually create vectors of metrics/catchment attributes
+```{r}
+site.areas <- c(65.9767, #FB
+                277.965, #TG
+                103.4015, #BC
+                41.4076, #TF
+                65.1986, #RH
+                NA, #RS
+                8.6085, #TS
+                14.7168, #SC
+                403.874, #WC
+                520.8331, #GC
+                NA, #WS
+                554 #FD
+                )
+```
+```{r}
+HI = c(0.473, 0.502, 0.519, 0.491, 0.564, NA, 0.566, 0.514, 0.542, 0.519, NA, NA)
 
 ```
 
-
-
-This chunk will read in the ***_mod.csv file 
+select a site to work with
 ```{r}
-mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+i <- 3 #enter site INDEX for file upload and export
 
-#sitenames- 1:Franklin Basin, 2:Tony Grove, 3:Beaver Creek, 4:Temple Fork, 5:Right Hand Fork, 
-#6:Ricks Spring, 7:Sawmill, 8:Spawn, 9:Wood Camp, 10:Guinavah)
-
-i <- 4
-
-site <- sitecodes[i]               #enter site code for file upload and export
+site <- sitecodes[i]               
 sitename <- sitenames[i]
-crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
+siteabv <- siteabbr[i]
+sitenum <- i
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
 
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 head(crossdf,3)
 paste('Site:', site, '-',sitename)
 ```
 
+### manually add a new column of values
+```{r}
+new.col.name <- 'CV_HYI' #define the column name as a character string
+new.col.values <- HI #define all values in sequence, or reference a vector with them
+
+
+comp.df[,new.col.name] <- new.col.values
+comp.df[,c(1,2,3,which(colnames(comp.df)==new.col.name))]
+```
+
+```{r}
+write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
+paste('data for',site,'saved at',date())
+```
+
+
+
+### Extract and compile FFC metrics
+---Read metrics from functional flow calculator for specific site
+```{r}
+FFCmets <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/FFC_data/',siteabv,'_metrics.csv'))
+rownames(FFCmets) = FFCmets[,1]
+colnames(FFCmets)[1] <- 'var'
+FFCmets
+```
+
+Filter to only the desired magnitude and timing metrics
+```{r}
+colnames(FFCmets)[2:ncol(FFCmets)] <- str_sub(colnames(FFCmets)[2:ncol(FFCmets)],-2,-1)
+FFCtims <- FFCmets[c('Wet_Tim_Water', 'SP_Tim','DS_Tim'),-1]
+FFCmets <- FFCmets[c('DS_Mag_50','SP_ROC'),-1]
+FFCmets
+FFCtims
+```
+remove columns with all NA values
+```{r}
+FFCmets <- FFCmets[,-which((colSums(FFCmets, na.rm = T)==0))]#FFCmets[,-which(is.na(colSums(FFCmets)))]  
+FFCmets
+```
+
+transfer all MAGNITUDE metrics into comp.df
+```{r}
+all.mets <- c()
+for (y in 1:ncol(FFCmets)) {
+  mets <- paste0(colnames(FFCmets)[y],c('_BFM','_RRC'))
+  vals <- FFCmets[,y]
+
+  for (i in 1:length(mets)){
+    comp.df[site,mets[i]] <- vals[i]
+  }
+
+
+  all.mets <- c(all.mets,mets)
+  }
+comp.df[site,all.mets]
+```
+
+
+Remove columns with all NA values
+```{r}
+FFCtims <- FFCtims[,-which((colSums(FFCtims, na.rm = T)==0))]
+
+FFCtims
+
+```
+
+transfer all TIMING values into comp.df
+```{r}
+all.tims <- c()
+for (y in 1:ncol(FFCtims)) {
+  tims <- paste0(colnames(FFCtims)[y],c('_MSD', '_RSD','_BSD'))
+  vals <- FFCtims[,y]
+
+  for (i in 1:length(tims)){
+    comp.df[site,tims[i]] <- vals[i]
+  }
+
+
+  all.tims <- c(all.tims,tims)
+  }
+comp.df[site,all.tims]
+```
+---select a water year and plot discharge with timing metrics
+```{r}
+wateryear <- 2021
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+par(mar = c(4,4,4,6))
+a <- 150 #index to start plot
+b <- 320 #end of viewing window
+barplot(wydf$SWI[a:b], axes = F)
+axis(side = 4, at = pretty(range(wydf$SWI[a:b]), n = 4),main = 'SWI')
+mtext('Surface water input (mm)', side = 4, line = 2)
+
+par(new=T)
+yrange = range(wydf$qpatch[a:b], na.rm = T)
+#plot discharge over the window.  The line gets plotted later over the highlight rectangles
+plot(wydf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'Discharge (m^3/s)', 
+     col = linecols[i],
+     main = paste('SWI & discharge at', sitename,wydf$WY[a]), xaxt = 'n', xlab = 'date'
+     )
+axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 6)]))
+
+timcolor <- c('green', 'orange','blue')
+
+abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_MSD')]), col = timcolor[1])
+abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_RSD')]), col = timcolor[2])
+abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_BSD')]), col = timcolor[3])
+
+legend('topright', lty = 1, col = c(linecols[i],timcolor), legend = c('discharge','melt start', 'recession start', 'baseflow start'))
+```
+
+Manually set timing values, then check on a plot
+```{r}
+rep.met <- 'MSD' #MSD, RSD, or BSD
+val <- 183 #enter water year day to try: MSD~150, RSD~250, BSD <- 365
+
+yr <- paste0(as.character(wateryear-2000),'_')
+comp.df[site,paste0(yr,rep.met)] <- val
+
+plot(wydf$qpatch, xlim = c(which(wydf$wyday==val)-40, which(wydf$wyday==val)+40), ylim = yrange, type = 'l', ylab = 'Discharge (m^3/s)', 
+     col = linecols[i],
+     main = paste('SWI & discharge at', sitename,wydf$WY[a]), xlab = 'date'
+     )
+
+abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_MSD')]), col = timcolor[1])
+abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_RSD')]), col = timcolor[2])
+abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_BSD')]), col = timcolor[3])
+```
+
+
+
+save updated catchment_comparison file (comp.df)
+```{r}
+write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
+paste('data for',sitename,'saved to catchment_comparison.csv at',date())
+```
+### Baseflow Metrics
+
+```{r}
+write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
+paste('data for',sitename,'saved to catchment_comparison.csv at',date())
+```
+
+### Melt Metrics
+
+```{r}
+write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
+paste('data for',sitename,'saved to catchment_comparison.csv at',date())
+```
+
+### Recession Metrics
+
+```{r}
+write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
+paste('data for',sitename,'saved to catchment_comparison.csv at',date())
+```
+
+### Other old stuff
+count total entries for each water year
 ```{r}
 wateryears <- crossdf$WY[which(crossdf$wyday==1)]
 wateryears

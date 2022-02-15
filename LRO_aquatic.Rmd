@@ -14,7 +14,8 @@ sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A','RS
                 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
 sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
                'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring', 'First Dam')
-i <-11
+i <-1
+
 
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
@@ -65,7 +66,7 @@ plot(tdf$Value, type = 'l', main = paste('temp at', sitename), ylab = 'temp', yl
 Add column for date and discharge/conductance/temperature, replace all low values with NA
 USER: check for reasonable threshold levels.  They should be rather extreme/impossible
 ```{r}
-minQ <- 0.00001                     #below these thresholds, values will be replaced with NA
+minQ <- -0.00001                     #below these thresholds, values will be replaced with NA
 minT <- -1
 minC <- 10
 maxQ <- 1000
@@ -101,7 +102,7 @@ plot(tdf$temperature~tdf$date, type = "l", xlab = 'Date', ylab = 'Temperature')
 --- next chunks can replace or remove remaining spikes if desired
 zoom in on a specific time window - conductance
 ```{r}
-a <- 70000     #window starting index from plot above
+a <- 55000     #window starting index from plot above
 c <- 15000  #window length (15-min intervals)
 b <- a+c
 
@@ -231,6 +232,7 @@ plot(qtcdf$date[day1:dayend],qtcdf$conductance[day1:dayend], type = 'l', col = '
 double check the destination for the daily data, then save this dataframe
 ```{r}
 write.csv(qtcdf, paste0('C:/Users/Daniel/Documents/Research/data/new_LRO_aquatic/',site,'.csv'), row.names = F)
+paste('saved data for',site,'at',date())
 ```
 
 

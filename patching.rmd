@@ -43,7 +43,12 @@ paste('Site:', sitecodes[i], '-', sitenames[i])
 snosite <- sitesnotel[i]
    #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
 crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+#crossdf$date <- as.Date(crossdf$date,'%m/%d/%Y')
 
+range(crossdf$date)
+colnames(crossdf)
+nrow(crossdf)
 ```
 
 ### open and append dataframe for a selected site
@@ -85,8 +90,10 @@ head(crossdf[tail(colnames(crossdf))],3)
 --- visualize and continue
 ```{r}
 plot(crossdf$cpatch, type = 'l', main = paste('patched conductance at',sitename))
+abline(v=which(is.na(crossdf$cpatch)), col = 'red')
 
 plot(crossdf$qpatch, type = 'l', main = paste('patched discharge at',sitename))
+abline(v=which(is.na(crossdf$qpatch)), col = 'red')
 
 ```
 
@@ -103,7 +110,7 @@ head(which(is.na(crossdf$qpatch)))
 select an index range (based on plot above) and see if the interval looks good.  Red lines are drawn on NA values
 ```{r}
 keep.rows <- 1:nrow(crossdf)
-keep.rows <- 1:2387 #comment out to keep all
+keep.rows <- 1:2554 #comment out to keep all
 plot(crossdf$cpatch[keep.rows], type = 'l', ylab = 'conductance',
      main = paste(sum(is.na(crossdf$cpatch[keep.rows])),'missing conductance values'))
 abline(v = which(is.na(crossdf$cpatch[keep.rows])), col = 'red')
@@ -140,7 +147,7 @@ Compare patched data to new observations
 ```{r}
 plot(new.data$discharge, type = 'l', main = paste('Discharge at', sitename), ylab = 'discharge')
 lines(new.cross$qpatch, type = 'l', col = 'cadetblue2') #will only overlap if start dates line up
-legend('topright', col = c( 'cadet blue2','black'),lty = 1, legend = c('downladed May \'21','downloaded Jan \'22'))
+legend('topright', col = c( 'cadet blue2','black'),lty = 1, legend = c('downladed Jan \'22','downloaded Feb \'22'))
 ```
 
 identify end of current data.  Appending will start here
@@ -272,10 +279,11 @@ tail(crossdf[colnames(crossdf)])==tail(append.df[colnames(crossdf)])
 save updated dataframe
 ```{r}
 write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'), row.names = F)
+paste('data for',site,'saved at',date())
 ```
 
 
---- original code for adding snotel data
+### original code for adding snotel data
 Begin by running SNOTEL and LRO_aquatic scripts to generate the qtc and snodf dataframes as .csv files.  This chunk will re-open them.
 
 ```{r}
@@ -310,8 +318,7 @@ crossdf$qpatch <- crossdf$discharge
 ```
 
 
----
-
+### Patching Cycle starts here 
 ```{r}
 qholes <- which(is.na(crossdf$qpatch))
 mholes <- which(is.na(crossdf$melt))
@@ -328,7 +335,6 @@ choles
 
 ```
 
-###Patching Cycle starts here ----------
 Generate plots 
 ```{r}
 plot(crossdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Discharge at', sitename))
@@ -350,8 +356,8 @@ axis(1, at = seq(1,nrow(crossdf), length.out = 7),
 #plot(crossdf$melt, type = 'l', ylab = 'Melt', main = paste('melt at', sitename))
 #abline(v = mholes, col = 'red')
 ```
-Conductance
---- 
+--- Conductance
+
 
 Create plot of patched time series and highlight the holes in data (red) and patches (green)
 ```{r}
@@ -373,7 +379,7 @@ Zoom in on a section of the conductance plot worth patching
 
 
 ```{r}
-patch.int <- c(2130, 2185)
+patch.int <- c(100,300)
 
 #patch.rng <- range(crossdf$cpatch[patch.int[1]:patch.int[2]], na.rm = T)
 #choles
@@ -405,6 +411,8 @@ i2 <- 13 #final value of choles to consider
 i2 <- i1-1+patch.len
 patch.len 
 paste('replace from index', choles[i1], 'to', choles[i2])
+choles[i2]-choles[i1]+1-patch.len==0  #this should read TRUE, meaning only one data gap exists
+
 ```
 
 
@@ -456,12 +464,14 @@ choles
 Save the dataframe for continuation later
 ```{r}
 write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'), row.names = F)
+paste('data for',site,'saved at',date())
+
 ```
 
 
 
-Discharge
----
+--- Discharge
+
 Create plots of patched time series and highlight the holes in data
 ```{r}
 date.mark <- '04-01' #vertical blue lines will be drawn at this date for reference
@@ -488,8 +498,8 @@ which(format(crossdf$date,'%m-%d')=='03-15')
 Zoom in on a section of the discharge plot worth patching.  This chunk includes a protocol that can be used to replace spikes from ice damming with NA if necessary
 
 ```{r}
-patch.int <- c(995,1013)
-na.thresh <- 01
+patch.int <- c(900,960)
+na.thresh <- 0.465249
 
 patch.rng <- range(crossdf$qpatch[patch.int[1]:patch.int[2]], na.rm = T)
 #qholes
@@ -498,9 +508,14 @@ plot(crossdf$qpatch, xlim=patch.int, ylim = c(0,max(crossdf$qpatch[patch.int[1]:
      type= 'l', main = paste(sitename,'centered at',crossdf$date[mean(patch.int)]), 
      ylab = 'discharge', col = 'seagreen2')
 abline(v = qholes, col = 'red')
-#abline(h = na.thresh, lty = 3)
+abline(h = na.thresh, lty = 3)
 lines(crossdf$discharge)
 #abline(v = frozen, col = 'goldenrod')
+
+#show precip/melt from associated SNOTEL
+par(new = T)
+barplot(crossdf$SWI, xlim = patch.int, axes = F)
+
 ```
 
 --- the next two chunks remove original values exceeding the threshold defined above
@@ -535,7 +550,7 @@ i2 <- 20 #final value of qholes to consider
 i2 <- i1-1+patch.len
 patch.len 
 paste('replace from index', qholes[i1], 'to', qholes[i2])
-qholes[i2]-qholes[i1]+1-patch.len==0  #this should read TRUE, meaning only one data gap exists
+qholes[i2]-qholes[i1]+1-patch.len==0  #this should read TRUE, meaning only one data gap exists in the interval
 ```
 
 
@@ -559,9 +574,6 @@ lines(crossdf$discharge, xlim=patch.int)
 
 ```
 
-
-
-
 --------------Generate and insert a linear patch
 ```{r}
 patchvals <- seq(crossdf$qpatch[qholes[i1]-1],
@@ -583,8 +595,6 @@ lines(crossdf$discharge, xlim=patch.int)
 
 ```
 
-
-
 If there was a problem, try running this chunk to undo it (set a range over which to restore original values)
 ```{r}
 j <- 
@@ -594,8 +604,7 @@ crossdf$qpatch[j:k]=crossdf$discharge[j:k]
 
 ```
 
-
-If it looks good, reset the qholes vector
+---If it looks good, reset the qholes vector
 ```{r}
 qholes <- which(is.na(crossdf$qpatch))
 qholes[1:70]
@@ -603,121 +612,22 @@ qholes[1:70]
 ```
 
 
-###Save the dataframe for continuation later
+Save the dataframe for continuation later
 ```{r}
 write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'), row.names = F)
+paste('data for',site,'saved at',date())
 ```
-
----
-
-
-```{r}
-study.int <- c(220,450)
-plot(crossdf$melt, xlim = study.int, type = 'l', main = sitename)
-plot(crossdf$discharge, xlim = study.int, type = 'l', 
-     main = paste('Discharge at',sitename))
-abline(v = qholes, col = 'red')
-
-plot(crossdf$conductance, xlim = study.int, type = 'l', ylab = 'Conductance', 
-     main = paste('Conductance at', sitename))
-abline(v = choles, col = 'red')
-```
-
-
-```{r}
-win1 <- c(study.int[1],300)
-win2 <- c(study.int[1],330)
-win3 <- c(study.int[1],study.int[2])
-win4 <- c(260,study.int[2])
-win5 <- c(310,study.int[2])
-plot(crossdf$discharge, xlim = study.int,
-     type = 'n', ylab = '')
-
-rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
-rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
-rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
-rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
-rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
-
-lines(crossdf$discharge[study.int[1]:study.int[2]])
-```
-
-
-```{r}
-par(mar = c(5,4,4,4) + 0.3)
-plot(crossdf$discharge[study.int[1]:study.int[2]], axes = F, type = 'n',
-     xlab = '', ylab = '')
-
-rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
-rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
-rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
-rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
-rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
-
-par(new = T)
-barplot(crossdf$melt[study.int[1]:study.int[2]], ylab = 'melt (in)',
-     main = paste('melt and discharge at', sitename), xlab = 'Date')
-abline(v = qholes, col = 'red')
-abline(v = study.int, lty =5)
-
-par(new = T)
-plot(crossdf$discharge[study.int[1]:study.int[2]], 
-     type = 'l', axes = F, ylab = '', xlab = '')
-
-axis(4, at = pretty(range(crossdf$discharge[study.int[1]:study.int[2]],na.rm = T)))
-mtext("discharge (CMS)", side = 4, line = 3)
-axis(1, at = seq(0,diff(study.int), length.out = 6), 
-     labels = (crossdf$date[seq(study.int[1],study.int[2],length.out = 6)]))
-```
-
-```{r}
-a <- study.int[1]  #index of starting time
-#a <- 518
-c <- 130  #window width (number of days)
-b <- a+c    #calculates final index
-b <- study.int[2]   #index of ending time
-win1 <- c(a,300)
-win2 <- c(a,360)
-win3 <- c(a,b)
-win4 <- c(300,b)
-win5 <- c(360,b)
-yrange <- c(0,max(qtc$discharge[a:b], na.rm = T))
-
-#plot discharge over the window.  The line gets plotted later over the highlight rectangle
-plot(qtc$discharge, xlim = c(a, b), ylim = yrange, type = 'n', ylab = 'discharge', 
-     main = paste('discharge at', sitename), xaxt = 'n', xlab = 'date'
-     )
-
-#highlight ranges for each window of ACF analysis
-rect(xleft=win1[1], xright=win1[2], ybottom = 0, ytop=.2*yrange[2],  col = linecols[1])
-rect(xleft=win2[1], xright=win2[2], ybottom = .2*yrange[2], ytop=.4*yrange[2],  col = linecols[2])
-rect(xleft=win3[1], xright=win3[2], ybottom = .4*yrange[2], ytop=.6*yrange[2],  col = linecols[3])
-rect(xleft=win4[1], xright=win4[2], ybottom = .6*yrange[2], ytop=.8*yrange[2],  col = linecols[4])
-rect(xleft=win5[1], xright=win5[2], ybottom = .8*yrange[2], ytop=1*yrange[2],  col = linecols[5])
-
-#draw and annotate a box around any patches that exist.  Adjust numbers to position vertically
-rect(patchstart, 0.5, patchend, 1.5)  #draw a box around patched section of line
-text(mean(patchstart,patchend), 0.3, 'Patched values')  #annotate patch box
-
-lines(lin.df$discharge, type = 'l', col = 'red')
-lines(qtc$discharge, type = 'l')
-axis(1, at = seq(a,b, length.out = 6), labels = (qtc$date[seq(a,b,length.out = 6)]))
-
-```
-
-
-
 
 
 
 ### compile patched data into a single dataframe (all_LRO_sites.csv)
 ```{r}
-siteabbr <- c('FB', 'TG', 'BC', 'TF','RH',
-               'RS', 'TS', 'SC', 'WC', 'GC','WS')
-i <- 11
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS',
+                'TS', 'SC', 'WC', 'GC','WS','FD')
+i <- 12
 site <- sitecodes[i]               #enter site code for file upload and export
 sitename <- sitenames[i]        #enter site name for plotting
-paste('Site:', sitecodes[i], '-', sitenames[i])
+paste('Site:', sitecodes[i], '-', sitenames[i],'loaded')
 ```
 Read in the patched data for the site, view the data, and re-assign "site" to the abbreviated code
 ```{r}
@@ -730,6 +640,8 @@ site <- siteabbr[i]
 Confine the dataframe to only LRO observed and patched data
 ```{r}
 site.df <- site.df[c('date','discharge','conductance','temp','cpatch','qpatch')]
+#site.df <- site.df[c('date','discharge','qpatch')]
+
 head(site.df, 3)
 ```
 
@@ -765,6 +677,8 @@ Return to the top of the sequence and select a new site.
 Save the dataframe
 ```{r}
 write.csv(all.sites, 'C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO_sites.csv',row.names = F)
+paste('data for',sitename,'saved to all_LRO_sites.csv at',date())
+
 ```
 
 
@@ -776,4 +690,28 @@ write.csv(all.sites, 'C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO
 
 
 
+
+
+
+### Prepare data for FFC
+
+```{r}
+i <- 12
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+snosite <- sitesnotel[i]
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+FFCdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+plot(FFCdf$qpatch, type = 'l', ylab = 'discharge', main = paste('Discharge at', sitename,'-',sum(is.na(FFCdf$qpatch)),'missing values'), lwd =3)
+
+FFCdf <- data.frame('date' = format(as.Date(FFCdf$date, '%Y-%m-%d'),'%m/%d/%Y'), 'flow' = FFCdf$qpatch)
+
+lines(FFCdf$flow, col = 'cadetblue2')
+abline(v = which(is.na(FFCdf$flow)), col = 'red')
+```
+```{r}
+write.csv(FFCdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/FFC_data/',site,'_FFC.csv'), row.names = F)
+paste('data for',site,'saved at',date())
+```
 

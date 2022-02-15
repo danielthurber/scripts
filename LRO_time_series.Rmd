@@ -32,17 +32,6 @@ day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-
 ```
 
 
-```{r}
-mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
-
-i <- 1
-site <- sitecodes[i]               #enter site code for file upload and export
-sitename <- sitenames[i]        #enter site name for plotting
-paste('Site:', sitecodes[i], '-', sitenames[i])
-   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
-
-```
-
 Initialize catchment areas in km^2
 ```{r}
 site.areas <- c(65.9767, #FB
@@ -58,6 +47,18 @@ site.areas <- c(65.9767, #FB
                 NA, #WS
                 554 #FD
                 )
+```
+
+
+```{r}
+mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as directory
+
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+
 ```
 
 Take a look at the color palette, adjust if desired

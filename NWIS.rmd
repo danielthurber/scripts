@@ -12,10 +12,10 @@ library(snotelr)
 
 Enter site names and codes for USGS gauge and NRCS SNOTEL station ID numbers
 ```{r}
-basin.name <- 'Sunlight Creek' #user input
-gaugenum <- '06206500' #user input
-snoname <- 'Evening Star' #user input
-snosite <- 472 #user input
+basin.name <- 'Logan River' #user input
+gaugenum <- '10109000' #user input
+snoname <- 'Tony Grove Lake' #user input
+snosite <- 823 #user input
 snodf1 <- snotel_download(site_id = snosite, internal = T)
 snosite.meta <- snodf1[1,]
 snosite.meta
@@ -86,13 +86,13 @@ head(which(snodf$wyday==1)) #rows that correspond to the start of a water year
 ```
 Enter the index of the first WY=1 row to double check
 ```{r}
-snodf$date[731]
+snodf$date[13150]
 ```
 
 Based on the end of NA data, choose the first day in a long sequence of intact data
 
 ```{r}
-a <- 731 #first value to keep (user input for each round)
+a <- 13150 #first value to keep (user input for each round)
 b <- a+350 #approx one year after a
 barplot(snodf$precip_mm[a:b], axes = F)
 axis(side = 4, at = pretty(range(snodf$precip[a:b]), n = 4))
@@ -135,11 +135,12 @@ SiteNumber = formatC(SiteNumber, width = 8, flag = 0, format = 'd')
 ParamCode  = "00060"           # The code for the discharge
 StatCode   = "00003"           # The code for the average values
 Start_Date = as.character(snoflo$date[1])      # Start date, format: YYYY-MM-DD
-End_Date   = "2020-09-30"      # End date, format: YYYY-MM-DD
+End_Date   = "2021-09-30"      # End date, format: YYYY-MM-DD
 Daily_Q = readNWISdv(SiteNumber, ParamCode, Start_Date, End_Date, StatCode)
 gauge.meta <- Daily_Q[1,]
 Daily_Q <- data.frame(date=Daily_Q$Date,
                       discharge = Daily_Q$X_00060_00003)
+head(Daily_Q,3)
 ```
 
 ```{r}
