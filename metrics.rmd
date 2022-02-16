@@ -56,12 +56,12 @@ site.areas <- c(65.9767, #FB
 ```
 ```{r}
 HI = c(0.473, 0.502, 0.519, 0.491, 0.564, NA, 0.566, 0.514, 0.542, 0.519, NA, NA)
-
+VAA = NA
 ```
 
 select a site to work with
 ```{r}
-i <- 3 #enter site INDEX for file upload and export
+i <- 4 #enter site INDEX for file upload and export
 
 site <- sitecodes[i]               
 sitename <- sitenames[i]
@@ -77,12 +77,11 @@ paste('Site:', site, '-',sitename)
 
 ### manually add a new column of values
 ```{r}
-new.col.name <- 'CV_HYI' #define the column name as a character string
-new.col.values <- HI #define all values in sequence, or reference a vector with them
+new.col.name <- 'CV_VAA' #define the column name as a character string
+new.col.values <- VAA #define all values in sequence, or reference a vector with them
 
-
-comp.df[,new.col.name] <- new.col.values
-comp.df[,c(1,2,3,which(colnames(comp.df)==new.col.name))]
+comp.df[,new.col.name] <- new.col.values #add values to the dataframe
+comp.df[,c(1,2,3,which(colnames(comp.df)==new.col.name))] #display the dataframe
 ```
 
 ```{r}
@@ -159,7 +158,7 @@ comp.df[site,all.tims]
 ```
 ---select a water year and plot discharge with timing metrics
 ```{r}
-wateryear <- 2021
+wateryear <- 2019
 wydf <- crossdf[which(crossdf$WY==wateryear),]
 year.char <- as.character(wateryear-2000)
 
@@ -214,7 +213,28 @@ write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/ca
 paste('data for',sitename,'saved to catchment_comparison.csv at',date())
 ```
 ### Baseflow Metrics
+--- calculate median baseflow ('BFM')
+```{r}
+for (i in 2016:2021){
 
+wateryear <- i
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+
+bsd <- comp.df[site,paste0(year.char,'_BSD')]
+msd <- comp.df[site,paste0(year.char,'_MSD')]
+
+bflows <- wydf[c(bsd:msd),'qpatch']
+
+bfm <- median(bflows, na.rm = T)
+
+comp.df[site,paste0(year.char,'_BFM')] <- bfm
+}
+```
+
+
+--- Save the dataframe
 ```{r}
 write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
 paste('data for',sitename,'saved to catchment_comparison.csv at',date())
