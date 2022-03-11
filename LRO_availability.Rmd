@@ -10,6 +10,7 @@ mypath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/'  #leave this as 
 library(naniar)
 library(snotelr)
 library(stringr)
+library(plotrix)
 
 sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
                'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
@@ -41,6 +42,18 @@ alldata$date <- as.Date(alldata$date,'%Y-%m-%d')
 Pull in data from each site and add it to the "alldata" dataframe and save to .csv
 ---
 ```{r}
+
+i <- 12
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+siteabv <- siteabbr[i]
+paste('Site:', sitecodes[i], '-', sitenames[i])
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+
+```
+
+
+```{r}
 patchdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
 patchdf$date <- as.Date(patchdf$date,'%Y-%m-%d')
 choice.vars <- c('date','discharge','conductance','temp','cpatch','qpatch')
@@ -49,12 +62,7 @@ paste('Site:', sitecodes[i], '-', sitenames[i])
 ```
 
 
-```{r}
-p <- rep(seq(0,.9, by=.1), each=2) 
-q <- rep(c(.03,.06), times = 10)
-g <- p+q
-g
-```
+
 
 ```{r}
 alldata <- merge.data.frame(alldata, patchdf, by = 'date', all = T)
@@ -63,11 +71,11 @@ paste('Site:', sitecodes[i], '-', sitenames[i], 'added')
 ```
 
 ```{r}
-colnames(alldata)[which(colnames(alldata) == 'discharge')] <- paste0(site,'_Q')
-colnames(alldata)[which(colnames(alldata) == 'conductance')] <- paste0(site,'_SC')
-colnames(alldata)[which(colnames(alldata) == 'temp')] <- paste0(site,'_T')
-colnames(alldata)[which(colnames(alldata) == 'cpatch')] <- paste0(site,'_CP')
-colnames(alldata)[which(colnames(alldata) == 'qpatch')] <- paste0(site,'_QP')
+colnames(alldata)[which(colnames(alldata) == 'discharge')] <- paste0(siteabv,'_Q')
+colnames(alldata)[which(colnames(alldata) == 'conductance')] <- paste0(siteabv,'_SC')
+colnames(alldata)[which(colnames(alldata) == 'temp')] <- paste0(siteabv,'_T')
+colnames(alldata)[which(colnames(alldata) == 'cpatch')] <- paste0(siteabv,'_CP')
+colnames(alldata)[which(colnames(alldata) == 'qpatch')] <- paste0(siteabv,'_QP')
 paste('Site:', sitenames[i], "data renamed")
 
 ```
@@ -78,9 +86,130 @@ write.csv(alldata, file = 'C:/Users/Daniel/Documents/Research/data/dataframes/pa
 ---
 
 Plot availability of data for each site
+Sets the spacing for the horizontal lines
+```{r}
+p <- rep(seq(0,.8, by=.1), each=1) 
+q <- rep(c(.045), times = 9)
+g <- c(p+q,.93,.96)
+g
+```
 
+Plot w/o temp
+```{r, fig.height=8, fig.width=9}
+daterange <- range(alldata$date)
+par(mar=c(4,8,2,6))
+plot((seq(1:nrow(alldata))/nrow(alldata))~alldata$date, type = 'n', yaxt = 'n',ylab ='', xlab = 'Date (tick marks: Jan. 1, white lines: Mar. 15)', ylim = c(0,1), main = "Data availability of LRO aquatic sites")
+#axis(side = 2, at = seq(.1,1, by = 0.1), labels = F, tick = F)
+axis(side = 2, at = c(seq(.05,0.85, by = 0.1),.915,.945,.975), labels = siteabbr,tick = F, las = 1)
+rect(xleft = daterange[1],ybottom = 0,xright = daterange[2],ytop = .99, col = "darkolivegreen3", border = NA)
+abline(h = c(1:9)/10-.005, col = 'black', lwd = 6)
+axis(side = 4, at = c(.025,.065,.425,.465,.825,.865,.915,.945,.975), labels = c("Q","SC","Q","SC","Q","SC","Q","Q","Q"), las = 1, tick = F)
+#abline(v=as.Date("2018-1-1","%Y-%m-%d"))
+par(xpd=T)
+legend(x = 'topright', inset = c(-.19,.25),pch = 15, col = c('darkolivegreen3','steelblue','firebrick2'),legend = c('observed','Patched','missing'))
+b=0.0001
 
+#data for LR_FB_BA
+ablineclip(v = alldata$date[which(is.na(alldata$FB_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
 
+ablineclip(v = alldata$date[which(is.na(alldata$FB_C))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for LR_TG_BA
+ablineclip(v = alldata$date[which(is.na(alldata$TB_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$TB_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for BC_CONF_A
+ablineclip(v = alldata$date[which(is.na(alldata$BC_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$BC_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for TF_CONF_A
+ablineclip(v = alldata$date[which(is.na(alldata$TF_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$TF_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for RHF_CONF_A
+ablineclip(v = alldata$date[which(is.na(alldata$RH_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$RH_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for RS_CONF_A
+ablineclip(v = alldata$date[which(is.na(alldata$RS_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$RS_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for TF_SAWM_A
+ablineclip(v = alldata$date[which(is.na(alldata$TS_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$TS_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for SPC_CONF_A
+ablineclip(v = alldata$date[which(is.na(alldata$SC_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$SC_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for LR_WC_A
+ablineclip(v = alldata$date[which(is.na(alldata$WC_Q))], col = 'steelblue', y1=b, y2=b+0.045)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_QP))], col = 'firebrick2', y1=b, y2=b+0.045)
+
+ablineclip(v = alldata$date[which(is.na(alldata$WC_SC))], col = 'steelblue', y1=b+0.046, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_CP))], col = 'firebrick2', y1=b+0.046, y2=b+0.09)
+
+b = b+0.1
+
+##data for LR_GCB_A
+ablineclip(v = alldata$date[which(is.na(alldata$GC_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$GC_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+
+ablineclip(v = alldata$date[which(is.na(alldata$WS_Q))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$WS_QP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+
+b = b+0.1
+
+#add annotations and reference lines
+text(x = as.Date('2019-09-01','%Y-%m-%d'), y = 1.07, labels = 'End of UEB outputs')
+
+abline(v = as.Date('2018-10-01','%Y-%m-%d'))
+
+abline(v = alldata$date[which(format(alldata$date,'%m-%d')=='03-15')], col= 'white')
+abline(h = g, col= "gray42")
+
+```
+
+Plot w/ temp data
 ```{r, fig.height=8, fig.width=9}
 daterange <- range(alldata$date)
 par(mar=c(4,8,2,6))
@@ -96,102 +225,102 @@ legend(x = 'topright', inset = c(-.19,.1),pch = 15, col = c('darkolivegreen3','s
 b=0
 
 #data for LR_FB_BA
-ablineclip(v = alldata$date[which(is.na(alldata$LR_FB_BA_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_FB_BA_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_FB_BA_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_FB_BA_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_FB_BA_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$FB_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 
 ##data for LR_TG_BA
-ablineclip(v = alldata$date[which(is.na(alldata$LR_TG_BA_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_TG_BA_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_TG_BA_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_TG_BA_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_TG_BA_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$TB_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for BC_CONF_A
-ablineclip(v = alldata$date[which(is.na(alldata$BC_CONF_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$BC_CONF_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$BC_CONF_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$BC_CONF_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$BC_CONF_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$BC_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for TF_CONF_A
-ablineclip(v = alldata$date[which(is.na(alldata$TF_CONF_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$TF_CONF_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$TF_CONF_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$TF_CONF_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$TF_CONF_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$TF_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for RHF_CONF_A
-ablineclip(v = alldata$date[which(is.na(alldata$RHF_CONF_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$RHF_CONF_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$RHF_CONF_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$RHF_CONF_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$RHF_CONF_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$RH_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for RS_CONF_A
-ablineclip(v = alldata$date[which(is.na(alldata$RS_CONF_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$RS_CONF_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$RS_CONF_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$RS_CONF_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$RS_CONF_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$RS_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for TF_SAWM_A
-ablineclip(v = alldata$date[which(is.na(alldata$TF_SAWM_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$TF_SAWM_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$TF_SAWM_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$TF_SAWM_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$TF_SAWM_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$TS_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for SPC_CONF_A
-ablineclip(v = alldata$date[which(is.na(alldata$SPC_CONF_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$SPC_CONF_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$SPC_CONF_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$SPC_CONF_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$SPC_CONF_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$SC_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for LR_WC_A
-ablineclip(v = alldata$date[which(is.na(alldata$LR_WC_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_WC_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_WC_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_WC_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_WC_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
+ablineclip(v = alldata$date[which(is.na(alldata$WC_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1
 
 ##data for LR_GCB_A
-ablineclip(v = alldata$date[which(is.na(alldata$LR_GCB_A_Q))], col = 'steelblue', y1=b, y2=b+0.03)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_GCB_A_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$GC_Q))], col = 'steelblue', y1=b, y2=b+0.03)
+ablineclip(v = alldata$date[which(is.na(alldata$GC_QP))], col = 'firebrick2', y1=b, y2=b+0.03)
 
-ablineclip(v = alldata$date[which(is.na(alldata$LR_GCB_A_SC))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
-ablineclip(v = alldata$date[which(is.na(alldata$LR_GCB_A_CP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$WS_Q))], col = 'steelblue', y1=b+0.03, y2=b+0.06)
+ablineclip(v = alldata$date[which(is.na(alldata$WS_QP))], col = 'firebrick2', y1=b+0.03, y2=b+0.06)
 
 ablineclip(v = alldata$date[which(is.na(alldata$LR_GCB_A_T))], col = 'firebrick2', y1=b+0.06, y2=b+0.09)
 b = b+0.1

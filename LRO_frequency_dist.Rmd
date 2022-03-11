@@ -1,5 +1,5 @@
 ---
-title: "R Playground"
+title: "Frequency Distribution"
 author: "Daniel Thurber"
 date: "2/22/2021"
 output: pdf_document

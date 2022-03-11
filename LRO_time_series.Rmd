@@ -18,7 +18,11 @@ siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS',
 
 sitesnotel <- c(1115, 1115, 1114,1013,1013, 823, 
               1013, 1098, 1113, 1113, 823,1098)
+ST.el <- c(7250, 7250, 7705,7406,7406, 8474, 
+           7406, 8270, 6332, 6332, 8474,8270)*0.3048
+
 #FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
+#GCS: 7705, KN: 7250, TF: 7406, USUDD: 8270, TGRS: 6332, TGL: 8474, FB: 8140
 
 acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
 acf.years <- c('15','16','17','18','19','20','21')
@@ -258,7 +262,7 @@ plot(crossdf$SWIT~crossdf$date, type = 'l')
 
 Generate a dataframe for a selected year, calculate total SWIT for that year
 ```{r}
-wateryear <- 2018
+wateryear <- 2017
 wydf <- crossdf[which(crossdf$WY==wateryear),]
 sum(wydf$SWIT)
 ```
@@ -329,12 +333,13 @@ axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 
 --- import, prepare, and filter dataframe for all sites
 ```{r}
 all.sites <-  read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/all_LRO_sites.csv')
-all.sites$date <- as.Date(all.sites$date,'%m/%d/%Y')
+all.sites$date <- as.Date(all.sites$date,'%Y-%m-%d')
 class(all.sites$date)
 colnames(all.sites)
+paste(class(all.sites$date), range(all.sites$date))
 ```
 
-Add water year columns to dataframe
+Add water year columns to dataframe if necessary
 ```{r}
 all.sites$day <- format(as.Date(all.sites$date, '%m/%d/%Y'),'%m-%d')
 all.sites$wyday <- 0
@@ -356,7 +361,7 @@ paste(class(all.sites$date), all.sites$date[1])
 ```
 Select water year and variable of interest, restrict dataframe by water year
 ```{r}
-water.year <- 2019
+water.year <- 2021
 variable <- "CP"
 wy.df <- all.sites[which(all.sites$WY==water.year),]
 ```
@@ -378,7 +383,7 @@ Filter dataframe with only selected columns
 wy.df <- wy.df[c(date.cols,sel.cols)]
 date.cols <- NULL
 sel.cols <- NULL
-
+head(wy.df,3)
 ```
 
 
@@ -474,6 +479,54 @@ for (i in 1:length(plot.cols)){
 }
 
 legend('right', inset = -0.2, legend = site.choices, lty = linetypes[choices], col = linecols[choices], xpd = T)
+```
+
+--- plot conductance for multiple sites
+```{r}
+choices <- c(1,2,6,9) #mainstem + Ricks Spring
+choices <- c(3,4,5,7,8) #East side tribs
+site.choices <- siteabbr[choices]
+
+plot.cols <- which(substr(colnames(wy.df),1,2) %in% site.choices)
+
+na.check = rep(NA,length(plot.cols))
+for(i in 1:length(plot.cols)){
+  na.check[i] <- sum(is.na(wy.df[,plot.cols[i]]))
+}
+
+data.frame('sites'=site.choices,'ID' = choices, 'column' = plot.cols, 'NA_count' = na.check)
+
+```
+
+
+```{r}
+a <- 140
+b <- 300
+
+par(mar = c(4,4,5,6))
+plot(wy.df[,5], xaxt = 'n', xlab = 'day', ylab = 'Specific Conductance',
+     xlim = c(a,b), ylim = c(150, 450),
+     main = paste('Conductance for Logan tributaries -', water.year),type = 'n')
+axis(1, at = seq(a,b, length.out = 8), labels = (wy.df$day[seq(a,b,length.out = 8)]))
+
+i <- 1
+for (i in 1:length(plot.cols)){
+bsd <- comp.df[site,paste0((water.year-2000),'_BSD')]
+msd <- comp.df[site,paste0((water.year-2000),'_MSD')]
+rsd <- comp.df[site,paste0((water.year-2000),'_RSD')]
+
+  lines(wy.df[c(bsd:msd),plot.cols[i]], col = linecols[choices[i]], lty = 2)
+  lines(c(rep(NA,msd-bsd),wy.df[c(msd:rsd),plot.cols[i]]), col = linecols[choices[i]],lwd=2)
+  lines(c(rep(NA,rsd-bsd),wy.df[c(rsd:365),plot.cols[i]]), col = linecols[choices[i]],lty = 3)
+
+}
+
+
+
+
+
+legend('right', inset = -0.2, legend = c(site.choices,'bf','melt','rec'), lty = c(rep(1,length(choices)),2,1,3),
+       lwd=c(rep(2,length(choices)),1,2,1),col = c(linecols[choices],rep('black',3)), xpd = T)
 ```
 
 --- Baseflow distributions (box plots)

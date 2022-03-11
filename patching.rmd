@@ -185,6 +185,21 @@ snosite.meta <- snodf[1,]
 snosite.meta
 ```
 
+Add SWE only to current data
+```{r}
+snodf <- data.frame(date = snodf$date,
+                  SWE_mm = snodf$snow_water_equivalent)
+snodf$date <- as.Date(snodf$date,'%Y-%m-%d')
+crossdf <- merge(x = crossdf, y = snodf, by = 'date', all = F)
+head(crossdf,3)
+```
+
+```{r}
+write.csv(crossdf, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'), row.names = F)
+paste('data for',site,'saved at',date())
+```
+
+
 Keep and rename relevant variables
 ```{r}
 snodf <- data.frame(date = snodf$date,
@@ -231,7 +246,7 @@ tail(sholes)
 
 keep only relevant new variables
 ```{r}
-snodf <- snodf[c('date','melt','rain','swi')]
+snodf <- snodf[c('date','melt','rain','swi','SWE_mm')]
 colnames(snodf)[4] <- 'SWI'
 head(snodf,3)
 ```
@@ -242,6 +257,7 @@ lines(tail(snodf$rain,365), col = linecols[1])
 lines(tail(snodf$melt,365), col = linecols[2])
 legend('topright', legend = c('rain', 'melt'), lty = 1, col = linecols[1:2])
 ```
+
 
 
 add snow data to data for appending

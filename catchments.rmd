@@ -1,5 +1,5 @@
 ---
-title: "Catchments"
+title: "Catchment Variables"
 author: "Daniel Thurber"
 date: "9/24/2021"
 output: pdf_document
@@ -34,6 +34,7 @@ vars.df$coName[x]
 Eraster <- paste0('E_',gage.code, '.tif')
 Araster <- paste0('A_',gage.code, '.tif')
 Hraster <- paste0('H_',gage.code, '.tif')
+Sraster <- paste0('S_',gage.code,'.tif')
 ```
 (optional) Run this chunk if you need to add a common name for plots
 ```{r}
@@ -44,7 +45,7 @@ User input - name and elevation of snotel site for plots
 ```{r}
 catchment <- vars.df$coName[x]  #full river name to display in plots
 
-st1 <- 'Taos Powderhorn' #snotel station name for plots
+st1 <- 'Taos Powderhorn' #snotel station name for plots+
 st1el <- 11057*.3048  #elevations in feet: multiply by 0.3048 ft/m
 
 ```

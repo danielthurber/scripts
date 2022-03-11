@@ -18,7 +18,7 @@ elevFreq <- freq(inraster)
 
 ```{r}
 catchment <- 'Logan River @ Guinivah'  #full river name to display in plots
-#GCS: 7705, KN: 7250, TF: 7406, USUDD: 8270, TGRS: 6332, TGL: 8474, FB: 8140
+
 st1 <- 'Tony Grove RS'
 st1el <- 6332*.3048  #elevations in feet: multiply by 0.3048 ft/m
 #st2 <- ''

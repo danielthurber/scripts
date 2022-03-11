@@ -12,19 +12,50 @@ library(naniar)
 library(ggplot2)
 switpath <- 'C:/Users/Daniel/Documents/Research/data/UEB_outputs/'
 patchpath <- 'C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/'
-sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A',
-               'RS_CONF_A', 'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A')
-sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork',
-               'Ricks Spring', 'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground')
-i <-5
 
-site <- sitecodes[i]               #enter site code for file upload and export
-sitename <- sitenames[i]        #enter site name for plotting
-paste('Site:', sitecodes[i], '-', sitenames[i])
-linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'sienna3', 'aquamarine3', 'magenta4')
+sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
+               'TF_SAWM_A', 'SPC_CONF_A', 'LR_WC_A', 'LR_GCB_A', 'WCS_CONF_A', 'LR_FD')
+sitenames <- c('Franklin Basin', 'Tony Grove', 'Beaver Creek', 'Temple Fork', 'Right Hand Fork','Ricks Spring', 
+               'TF at Sawmill', 'Spawn Creek', 'Above Wood Camp', 'Guinavah Campground','Wood Camp Spring','First Dam')
+siteabbr <- c('FB', 'TG', 'BC', 'TF','RH', 'RS', 
+              'TS', 'SC', 'WC', 'GC', 'WS','FD')
 
-rgbmat <- col2rgb(linecols)/255
+sitesnotel <- c(1115, 1115, 1114,1013,1013, 823, 
+              1013, 1098, 1113, 1113, 823,1098)
+ST.el <- c(7250, 7250, 7705,7406,7406, 8474, 
+           7406, 8270, 6332, 6332, 8474,8270)*0.3048
+
+#FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
+#GCS: 7705, KN: 7250, TF: 7406, USUDD: 8270, TGRS: 6332, TGL: 8474, FB: 8140
+
+startyear <- c(2015,2015,2016,2016,2017,2016,
+               2019,2019,2019,2019,2019,2015)
+acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
+acf.years <- c('15','16','17','18','19','20','21')
+plot.points <- c(1,5,7,8,15,17,19)
+
+linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
+              'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
+linetypes <- c(1,1,1,1,1,3,1,1,1,1,4,1)
+rgbmat <- col2rgb(linecols)
+wydates <- data.frame(wyday = seq(1,366),
+day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
+comp.df <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'))
+corr.df <- read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/correlograms.csv')
+colnames(comp.df)[4:171] <- str_sub(colnames(comp.df)[4:171],-6,-1) #make sure column names are only the last 6 characters
+row.names(comp.df) <- sitecodes
+
 ```
+```{r}
+i <-12     #enter site INDEX for file upload and export
+
+site <- sitecodes[i]               
+sitename <- sitenames[i]
+siteabv <- siteabbr[i]
+sitenum <- i
+paste(sitename, site)
+```
+
 
 Read the patched data csv into a dataframe
 
@@ -42,11 +73,7 @@ qtc$wyday <- 0
 head(qtc,3)
 ```
 
-create a reference dataframe relating water year days to month-day format
-```{r}
-wydates <- data.frame(wyday = seq(1,366),
-day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
-```
+
 
 
 Populate water year day column with appropriate values 1-366
@@ -76,17 +103,14 @@ Merge dataframes for future cross-correlation.  Only keep rows within the period
 mod.df <- merge(mod.df, qtc, by = 'date')
 ```
 
-Add a water year column to the dataframe
-```{r}
-mod.df$WY = ifelse(as.numeric(format(mod.df$date,'%m'))>=10, 
-                     as.numeric(format(mod.df$date,'%Y'))+1, 
-                     as.numeric(format(mod.df$date,'%Y'))) #determine water year
-```
+
 
 ```{r}
-plot(mod.df$cpatch, type = 'l', col = 'red', xlim = c(0,))
+plot(mod.df$cpatch, type = 'l', col = 'red', 
+     xlim = c(1,nrow(mod.df)), ylim = range(mod.df$cpatch,na.rm=F))
 lines(qtc$cpatch)
-plot(mod.df$qpatch, type = 'l', col = 'red')
+plot(mod.df$qpatch, type = 'l', col = 'red', 
+     xlim = c(1,nrow(qtc)))
 lines(qtc$qpatch)
 ```
 
