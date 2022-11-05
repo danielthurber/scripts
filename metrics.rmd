@@ -13,6 +13,9 @@ library(stringr)
 library(zoo, warn.conflicts = F)
 library(raster, warn.conflicts = F)
 
+windowsFonts(A = windowsFont('Times New Roman'))
+dayticks <- c(93,124,153, 184,214,245,275,306,337,366) #water year days corresponding to the first of the month
+ticklabs <- c('Jan 1', 'Feb 1','Mar 1','Apr 1','May 1','Jun 1','Jul 1','Aug 1','Sep 1', 'Oct 1')
 
 
 sitecodes <- c('LR_FB_BA', 'LR_TG_BA', 'BC_CONF_A', 'TF_CONF_A','RHF_CONF_A', 'RS_CONF_A', 
@@ -34,6 +37,9 @@ startyear <- c(2015,2015,2016,2016,2017,2016,
                2019,2019,2019,2019,2019,2015)
 acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
 acf.years <- c('15','16','17','18','19','20','21')
+plot.points <- c(1,5,7,8,15,17,19)
+year.type <- c('(Normal)', '(Normal)', '(Wet)', '(Dry)', '(Wet)', '(Normal)', '(Dry)')
+
 
 linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
               'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
@@ -51,9 +57,15 @@ head(comp.df[,which(colSums(comp.df[,4:ncol(comp.df)],na.rm = T)!=0)+3],3)
 ```
 Look at values for a specific variable
 ```{r}
-myvar <- 'KST'
+myvar <-'MMQ'
 comp.df[,which(substr(colnames(comp.df),4,6)==myvar)]
 ```
+Hard code a single value
+```{r}
+
+comp.df['WCS_CONF_A','18_QRM'] #<- NA
+```
+
 
 initialize site areas (km^2)
 ```{r}
@@ -74,7 +86,7 @@ site.areas <- c(65.9767, #FB
 
 select a site to work with
 ```{r}
-i <-1#enter site INDEX for file upload and export
+i <-7#enter site INDEX for file upload and export
 
 site <- sitecodes[i]               
 sitename <- sitenames[i]
@@ -89,7 +101,21 @@ paste('Site:', site, '-',sitename)
 ```
 
 ### manually add a new column of values
+select a site to work with
+```{r}
+i <-7#enter site INDEX for file upload and export
 
+site <- sitecodes[i]               
+sitename <- sitenames[i]
+siteabv <- siteabbr[i]
+sitenum <- i
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+head(crossdf,3)
+paste('Site:', site, '-',sitename)
+```
 Manually create vectors of metrics/catchment attributes
 
 ```{r}
@@ -114,6 +140,22 @@ paste('data for',site,'saved at',date())
 
 
 ### Extract and compile FFC metrics
+select a site to work with
+```{r}
+i <-7#enter site INDEX for file upload and export
+
+site <- sitecodes[i]               
+sitename <- sitenames[i]
+siteabv <- siteabbr[i]
+sitenum <- i
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+head(crossdf,3)
+paste('Site:', site, '-',sitename)
+```
+
 ---Read metrics from functional flow calculator for specific site
 ```{r}
 FFCmets <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/FFC_data/',siteabv,'_metrics.csv'))
@@ -180,25 +222,28 @@ comp.df[site,all.tims]
 ```
 ---select a water year and plot discharge with timing metrics
 ```{r}
-wateryear <- 2017
+wateryear <- 2021
 wydf <- crossdf[which(crossdf$WY==wateryear),]
 year.char <- as.character(wateryear-2000)
 
 par(mar = c(4,4,4,6))
 a <- 150 #index to start plot
-b <- 320 #end of viewing window
-barplot(wydf$SWI[a:b], axes = F)
-axis(side = 4, at = pretty(range(wydf$SWI[a:b]), n = 4),main = 'SWI')
-mtext('Surface water input (mm)', side = 4, line = 2)
+b <- 350 #end of viewing window
+#barplot(wydf$SWI[a:b], axes = F, type = 'n')
 
-par(new=T)
+
+#par(new=T)
+par(family = 'A')
 yrange = range(wydf$qpatch[a:b], na.rm = T)
 #plot discharge over the window.  The line gets plotted later over the highlight rectangles
 plot(wydf$qpatch, xlim = c(a, b), ylim = yrange, type = 'l', ylab = 'Discharge (m^3/s)', 
      col = linecols[i],
-     main = paste('SWI & discharge at', sitename,wydf$WY[a]), xaxt = 'n', xlab = 'date'
+     main = paste('Discharge at', sitename,wydf$WY[a]), xaxt = 'n', xlab = 'date'
      )
-axis(1, at = seq(a,b, length.out = 6), labels = (wydf$date[seq(a,b,length.out = 6)]))
+#axis(side = 4, at = pretty(range(wydf$SWI[a:b]), n = 4),main = 'SWI')
+#mtext('Surface water input (mm)', side = 4, line = 2)
+
+axis(1, at = dayticks, labels = ticklabs)
 
 timcolor <- c('green', 'orange','blue')
 
@@ -206,13 +251,13 @@ abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_MSD')]), col = timc
 abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_RSD')]), col = timcolor[2])
 abline(v = which(wydf$wyday==comp.df[site,paste0(year.char,'_BSD')]), col = timcolor[3])
 
-legend('topright', lty = 1, col = c(linecols[i],timcolor), legend = c('discharge','melt start', 'recession start', 'baseflow start'))
+legend('topright', lty = 1, col = c(linecols[i],timcolor[1:2]), legend = c('discharge','melt start', 'recession start'))
 ```
 
 Manually set timing values, then check on a plot
 ```{r}
 rep.met <- 'RSD' #MSD, RSD, or BSD
-val <- 249#enter water year day to try: MSD~150, RSD~250, BSD <- 365
+val <- 245#enter water year day to try: MSD~150, RSD~250, BSD <- 365 
 
 yr <- paste0(as.character(wateryear-2000),'_')
 comp.df[site,paste0(yr,rep.met)] <- val
@@ -356,7 +401,7 @@ paste('data for',sitename,'saved to catchment_comparison.csv at',date())
 ### Baseflow Metrics
 --- calculate median baseflow ('BFM')
 ```{r}
-#for (num in 1:12){
+for (num in 1:12){
   site <- sitecodes[num]               
 sitename <- sitenames[num]
 siteabv <- siteabbr[num]
@@ -366,7 +411,7 @@ crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/p
 
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 
-#for (ii in startyear[i]:2021){
+for (ii in startyear[num]:2021){
 
 wateryear <- ii
 wydf <- crossdf[which(crossdf$WY==wateryear),]
@@ -398,24 +443,50 @@ crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/p
 
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 
-for (ii in startyear[i]:2021){
+for (ii in startyear[num]:2021){
   
 wateryear <- ii
 wydf <- crossdf[which(crossdf$WY==wateryear),]
 year.char <- as.character(wateryear-2000)
 
-minroll <- min(rollmean(wydf$qpatch,7))
+minroll <- min(rollmean(wydf$qpatch,7), na.rm = T)
 comp.df[site,paste0(year.char,'_QRM')] <- minroll
 }}
 
 paste("QRM Calculated for", sitename)
 ```
 
+--- Winter Flow Index ('WFI')
+```{r}
+
+for (num in 1:12){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+
+for (ii in startyear[num]:2021){
+  
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+QRM <- min(rollmean(wydf$qpatch,7), na.rm = T)
+WFI <- QRM/mean(wydf$qpatch)
+comp.df[site,paste0(year.char,'_WFI')] <- WFI
+}}
+
+paste("WFI Calculated for", sitename)
+```
 
 --- Days of Q|SWIT correlation (BQS)
 ```{r}
 
-for (num in 1:5){
+for (num in c(1:5,12)){
   site <- sitecodes[num]               
 sitename <- sitenames[num]
 siteabv <- siteabbr[num]
@@ -456,12 +527,45 @@ paste('data for',sitename,'saved to catchment_comparison.csv at',date())
 ```
 
 ### Melt Metrics
+--- Melt season runoff ratio (MRR)
+```{r}
+#num <- 1
+for (num in c(1:5,12)){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
 
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+
+for (ii in startyear[num]:2018){
+
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+    msd <- comp.df[site,paste0(year.char,'_MSD')]
+    rsd <- comp.df[site,paste0(year.char,'_RSD')]+30
+
+     mflows <- wydf[which(wydf$wyday >= msd & wydf$wyday < rsd),]
+    
+totalQ <- sum(mflows$qpatch)/site.areas[num]*3.6*24
+totalSWIT <- sum(mflows$SWIT)*1000
+
+
+
+mrr <- totalQ/totalSWIT
+
+comp.df[site,paste0(year.char,'_MRR')] <- mrr
+}}
+paste("MRR Calculated for", sitename)
+``` 
 
 --- Q|SWIT lag to peak of correlation (QMP)
 ```{r}
 
-for (num in 1:5){
+for (num in c(1:5,12)){
   site <- sitecodes[num]               
 sitename <- sitenames[num]
 siteabv <- siteabbr[num]
@@ -595,6 +699,66 @@ paste("MCA Calculated for", sitename)
 
 ```
 
+--- Total melt discharge (MMQ)
+```{r}
+#num <- 1
+for (num in 1:12){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+
+for (ii in startyear[num]:2021){
+
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+
+rsd <- comp.df[site,paste0(year.char,'_RSD')]
+msd <- comp.df[site,paste0(year.char,'_MSD')]
+
+mflows <- wydf[c(msd:(rsd+60)),]
+
+mmq <- sum(mflows$qpatch, na.rm = T)
+
+comp.df[site,paste0(year.char,'_MMQ')] <- mmq}}
+paste("MMQ Calculated for", sitename)
+```
+
+--- maximum daily average discharge (MXQ)
+```{r}
+for (num in 1:12){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+
+for (ii in startyear[num]:2021){
+
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+
+rsd <- comp.df[site,paste0(year.char,'_RSD')]
+msd <- comp.df[site,paste0(year.char,'_MSD')]
+
+mflows <- wydf[c(msd:rsd),]
+
+mxq <- max(mflows$qpatch, na.rm = T)
+
+comp.df[site,paste0(year.char,'_MXQ')] <- mxq
+}}
+paste("MMQ Calculated for", sitename)
+```
+
 --- Save dataframe
 ```{r}
 write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
@@ -694,13 +858,113 @@ paste("RCA Calculated for", sitename)
 }
 ```
 
+Weekly recession rate of change (RRW)
+```{r}
+for (num in 1:12){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+for (ii in startyear[num]:2021){
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+
+rsd <- comp.df[site,paste0(year.char,'_RSD')]
+if (rsd<265) {
+  red <- rsd+100
+} else {
+  red <- 365
+}
+
+rflows <- wydf[which(wydf$wyday >= rsd & wydf$wyday < red),'qpatch']
+
+RRW <- (rflows[1]-rflows[8])/(7*site.areas[num])
+
+comp.df[site,paste0(year.char,'_RRW')] <- RRW
+}}
+paste("RRW Calculated for", sitename)
+
+```
+
+Monthly recession rate of change (RRM)
+```{r}
+for (num in 1:12){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+for (ii in startyear[num]:2021){
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+
+rsd <- comp.df[site,paste0(year.char,'_RSD')]
+if (rsd<265) {
+  red <- rsd+100
+} else {
+  red <- 365
+}
+
+rflows <- wydf[which(wydf$wyday >= rsd & wydf$wyday < red),'qpatch']
+
+RRM <- (rflows[1]-rflows[31])/(30*site.areas[num])
+
+comp.df[site,paste0(year.char,'_RRM')] <- RRM
+}}
+paste("RRM Calculated for", sitename)
+
+```
+
 ```{r}
 write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
 paste('data for',sitename,'saved to catchment_comparison.csv at',date())
 ```
 
 ### Annual Metrics
---- total fall rain (TFR))
+--- Future baseflow t+1 (FBF)
+```{r}
+#num <- 1
+for (num in 1:12){
+  site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+sitenum <- num
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+#ii <- 2015
+for (ii in startyear[num]:2020){ #can't do this for 2021 yet
+
+wateryear <- ii
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+next.year <- as.character(wateryear-2000+1)
+
+
+#bsd <- comp.df[site,paste0(year.char,'_BSD')]
+#msd <- comp.df[site,paste0(year.char,'_MSD')]
+
+#bflows <- wydf[c(bsd:msd),'qpatch']
+
+fbf <- comp.df[site,paste0(next.year,'_QRM')]
+
+comp.df[site,paste0(year.char,'_FBF')] <- fbf
+}}
+paste("FBF Calculated for", sitename)
+```
+
+--- total fall rain (TFR) (from snotel)
 ```{r}
 #num <- 1
 for (num in 1:12){
@@ -761,6 +1025,7 @@ comp.df[site,paste0(year.char,'_TMP')] <- tmp
 }}
 paste("TMP Calculated for", sitename)
 ```
+
 --- mean annual discharge (QAV)
 ```{r}
 #num <- 1
@@ -803,7 +1068,7 @@ crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/'
 
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 
-for (ii in startyear[num]:2021){
+for (ii in startyear[num]:2018){
 
 wateryear <- ii
 wydf <- crossdf[which(crossdf$WY==wateryear),]
@@ -822,19 +1087,19 @@ comp.df[site,paste0(year.char,'_RRS')] <- rrs
 paste("RRS Calculated for", sitename)
 ```
 
---- Max SWE (mm) (MXS)
+--- Max SWE (mm) (MXS) from UEB
 ```{r}
 #num <- 1
-for (num in 1:12){
+for (num in c(1:5,12)){
   site <- sitecodes[num]               
 sitename <- sitenames[num]
 siteabv <- siteabbr[num]
 sitenum <- num
-crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/',site,'_mod.csv'))
 
 crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
 
-for (ii in startyear[num]:2021){
+for (ii in startyear[num]:2018){
 
 wateryear <- ii
 wydf <- crossdf[which(crossdf$WY==wateryear),]
@@ -846,7 +1111,7 @@ year.char <- as.character(wateryear-2000)
 
 #bflows <- wydf[c(bsd:msd),'qpatch']
 
-mxs <- max(wydf$SWE_mm, na.rm = T)
+mxs <- max(wydf$SWE, na.rm = T)
 
 comp.df[site,paste0(year.char,'_MXS')] <- mxs
 }}
@@ -894,6 +1159,28 @@ paste("QFP Calculated for", sitename)
 ```{r}
 write.csv(comp.df, paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'), row.names = F)
 paste('data for',sitename,'saved to catchment_comparison.csv at',date())
+```
+
+
+### Area-outlet normalized metrics
+```{r}
+metric <- 'QRM'
+vals.df <- comp.df[,which(substr(colnames(comp.df),4,6)==metric)]
+vals.df
+```
+```{r}
+year <- 15
+year.df <- vals.df[,which(substr(colnames(vals.df),1,2)==as.character(year))]
+year.df/year.df[12]
+```
+```{r}
+for (i in 1:ncol(vals.df)) {
+vals.df[,i] <- vals.df[,i]/vals.df[12,i]
+}
+vals.df
+```
+```{r}
+AOmets <- data.frame(AOmets,vals.df)
 ```
 
 

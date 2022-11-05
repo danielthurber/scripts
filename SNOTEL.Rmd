@@ -10,11 +10,11 @@ Input the name of the file within the designated folder and enter initialization
 library(naniar)
 library(ggplot2)
 mypath <- 'C:/Users/Daniel/Documents/Research/data/SNOTEL/'
-site <- 'UDD_1098'
+site <- 'FB_484'
 #FB_484, GCS_1114, KN_1115, TF_1013, TGL_823, TGRS_1113, UDD_1098
 sitesnotel <- c(1115, 1115, 1114,1013,1013, 823, 
               1013, 1098, 1113, 1113, 823,1098)
-csitename <- "USU Doc Daniel" #common name for plots
+csitename <- "Franklin Basin" #common name for plots
 ```
 
 

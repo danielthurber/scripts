@@ -55,11 +55,13 @@ head(comp.df[,which(colSums(comp.df[,4:171],na.rm = T)!=0)+3],3)
 
 ```{r}
 #enter the 
-sites <- siteabbr[1:5] #enter the 2-letter codes for the sites you want to compare
-years <- c('18')
-season <- c('F','M')
-variable <- c('Q')
-funct <- c('C')
+site.nums <- c(1:5,7,8,9,12)
+sites <- siteabbr[site.nums] #enter the 2-letter codes for the sites you want to compare
+years <- 5
+years <- acf.years[years]
+season <- c('F','M') #F-full, M-Melt, B-baseflow
+variable <- c('Q') #Q-discharge, C-conductance, P-C|Q, M-Q|SWI(SNOTEL)
+funct <- c('A') #A-ACF, C-Cross|SWIT, S-Cross|SNOTEL melt
 
 sel.codes <- colnames(corr.df)
 
@@ -94,25 +96,27 @@ head(c.comp.df)
 
 Generate plot label string
 ```{r}
-lab <- paste0("Q|SWIT CCF for 20",years[1])
+lab <- paste0("Q autocorrelation for 20",years[1])
 lab
 (colnames(c.comp.df)[-1])
 ```
 
 ```{r}
 #set line parameters
-lncolors <- c(1,2,3,4,5, 1,2,3,4,5) #number based on site
-linetypes <- c(1,1,1,1,1,2,2,2,2,2) #1 for runoff, 2 for melt
+lncolors <- c(1,2,3,7,8,9) #number based on site
+linetypes <- c(1,1,1,1,1,1) #1 for runoff, 2 for melt
 ln.names <- c('FB', 
               'TG',
               'BC',
-              'TF',
-              'RH',
-              'FB - melt', 
-              'TG - melt',
-              'BC - melt',
-              'TF - melt',
-              'RH - melt')
+              'TS',
+              'SC',
+              'WC'
+#              'FB - melt', 
+ #             'TG - melt',
+  #            'BC - melt',
+   #           'TF - melt',
+    #          'RH - melt'
+)
 
 #Create a blank plot
 plot(c.comp.df$lag, c.comp.df$acf, col=linecols[1],

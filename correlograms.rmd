@@ -94,6 +94,68 @@ write.csv(corr.df, 'C:/Users/Daniel/Documents/Research/data/dataframes/correlogr
 paste(acf.code,'added to corr.df at',date())
 ```
 
+
+---Generate and Save Q ACF for chosen period
+```{r}
+
+num <-  4 #select site by number
+wateryear <- 2021
+Cor.code <- '_F_Q_A'
+
+site <- sitecodes[num]               
+sitename <- sitenames[num]
+siteabv <- siteabbr[num]
+crossdf <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/patched_data/',site,'_patched.csv'))
+
+crossdf$date <- as.Date(crossdf$date,'%Y-%m-%d')
+
+wydf <- crossdf[which(crossdf$WY==wateryear),]
+year.char <- as.character(wateryear-2000)
+
+#msd <- which(wydf$wyday==comp.df[site,paste0(year.char,'_MSD')]-30)
+#rsd <- comp.df[site,paste0(year.char,'_RSD')]
+
+which(wydf$day=='02-02') #use ctrl+Enter to look up index for a particular day
+which(wydf$day=='09-25') #use ctrl+Enter to look up index for a particular day
+
+a <- 120 #start row for correlation
+b <- 360 #end row for correlation 341
+acf.code <- paste0(siteabv,'_',year.char,Cor.code)
+
+
+plot(wydf$qpatch, type = 'l', col = linecols[num], main = acf.code,
+     xlab = '', ylab = '')
+
+rect(a,0.05*max(wydf$qpatch, na.rm = T), b,max(wydf$qpatch, na.rm = T))
+```
+
+
+```{r}
+flow.per <- wydf[c(a:b),]
+
+lagmax <- 100
+
+acf1 <- acf(flow.per$qpatch, lag.max = lagmax, 
+             plot = F, na.action = na.pass)
+
+lagmax <- max(acf1$lag)
+
+acf.df <- data.frame(lag=acf1$lag)
+acf.df[acf.code] <- acf1$acf
+acf.df <- acf.df[which(acf.df$lag>=0),]
+
+plot(acf.df$lag, acf.df[,acf.code], xlim = c(0,50), type = 'l', col = linecols[num], main = paste(acf.code, acf.code %in% colnames(corr.df)))
+abline(h = 0.2, lty = 3)
+```
+"False" in title indicates the given correlogram is NOT in corr.df.  Now add it here:
+
+```{r}
+corr.df <- merge(corr.df, acf.df, by = 'lag', all = T)
+write.csv(corr.df, 'C:/Users/Daniel/Documents/Research/data/dataframes/correlograms.csv',row.names = F)
+paste(acf.code,'added to corr.df at',date())
+```
+
+
 ---
 ### Use the following section to evaluate correlation to snotel data (can't be added to corr.df yet) and plot C|Q ccf
 

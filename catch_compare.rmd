@@ -34,7 +34,9 @@ startyear <- c(2015,2015,2016,2016,2017,2016,
                2019,2019,2019,2019,2019,2015)
 acf.sites <- c('FB_', 'TG_', 'BC_', 'TF_', 'RH_', 'RS_', 'TS_', 'SC_', 'WC_', 'GC_', 'WS_', 'FD_')
 acf.years <- c('15','16','17','18','19','20','21')
-plot.points <- c(1,5,7,8,15,17,19)
+plot.points <- c(15,17,19,18,1,5,7)
+year.type <- c('(Normal)', '(Normal)', '(Wet)', '(Dry)', '(Wet)', '(Normal)', '(Dry)')
+
 
 linecols <- c('brown3', 'goldenrod', 'forestgreen', 'bisque4', 'slateblue', 'tan1', 
               'aquamarine3', 'magenta4', 'sienna3','cyan','violetred2','yellow2')
@@ -44,11 +46,11 @@ wydates <- data.frame(wyday = seq(1,366),
 day=format(seq.Date(as.Date('2019-10-1','%Y-%m-%d'),as.Date('2020-09-30','%Y-%m-%d'),1),'%m-%d'))
 comp.df <- read.csv(paste0('C:/Users/Daniel/Documents/Research/data/dataframes/catchment_comparison.csv'))
 corr.df <- read.csv('C:/Users/Daniel/Documents/Research/data/dataframes/correlograms.csv')
-colnames(comp.df)[4:171] <- str_sub(colnames(comp.df)[4:171],-6,-1) #make sure column names are only the last 6 characters
+colnames(comp.df)[4:ncol(comp.df)] <- str_sub(colnames(comp.df)[4:ncol(comp.df)],-6,-1) #make sure column names are only the last 6 characters
 row.names(comp.df) <- sitecodes
 data.frame(A=row.names(comp.df),B=comp.df[,'site_name'])==data.frame(A=sitecodes, B = sitenames)#verify that row names match up
 
-head(comp.df[,which(colSums(comp.df[,4:171],na.rm = T)!=0)+3],3)
+head(comp.df[,which(colSums(comp.df[,4:ncol(comp.df)],na.rm = T)!=0)+3],5)
 ```
 
 Take a look at the color palette, adjust if desired
@@ -80,19 +82,25 @@ comp.vars <- data.frame('VAR' = c('KST', 'HYI', 'MDS','VAA','MHS', 'MDE'),
                         'main.lab' = c('karst', 'hypsometry', 'slope', 'aspect', 'hillshade', 'elevation'))
 ```
 
+Look at values for a specific variable
+```{r}
+myvar <- 'TMP'
+comp.df[,which(substr(colnames(comp.df),4,6)==myvar)]
+```
+
 ### Describe responses by catchment variables
 ```{r}
 sites <- 1:12 #select all sites
 #sites <- which(!is.na(site.areas)) #select surface catchments
-#sites <- c(1:5) #select custom sites
+#sites <- c(1:5,12) #select custom sites
 years <- c(1:7) #numbers 1-7 for '15-'21
-funct <- 'MCA'
-y.title <- 'Lag to end of correlation'
-y.units <- '(days)'
-catch.var <- 6
+funct <- 'BFM'
+y.title <- 'Median Baseflow'
+y.units <- ''
+catch.var <- 4
 x.var <- paste0('CV_',comp.vars[catch.var,1])
 x.title <- comp.vars[catch.var,2]
-plot.title <- paste('Melt C ACF correlation by',comp.vars[catch.var,3])
+plot.title <- paste('Median Baseflow by',comp.vars[catch.var,3])
 
 sel.sites <-   sitecodes[sites]
 
@@ -127,20 +135,41 @@ for (x in 1:length(sel.cols)){
 }
 legend('right', inset = -0.2, legend = c(siteabbr[sites],paste0('20',acf.years[years])), pch = c(rep(19, times = length(sites)),pt.types), col = c(linecols[sites], rep('black', times = length(years))), xpd = T)
 ```
+Plot for aspect w/ directions
+```{r}
+
+ylab <- paste(y.title,y.units)
+pt.types <- plot.points[years]
+par(mar = c(4,4,4,6))
+plot(new.comp[,sel.cols[1]]~new.comp[,x.var], ylim = range(new.comp[,sel.cols], na.rm = T) ,
+     main = paste(normed,plot.title),xlab = x.title, ylab = ylab, type = 'n', xaxt = 'n')
+axis(1, at = c(150,180, 225, 270,300), labels = c('SSE','S','SW','W','WNW'))
+for (x in 1:length(sel.cols)){
+  points(new.comp[,sel.cols[x]]~new.comp[,x.var], col = linecols[sites], pch = pt.types[x])
+
+}
+legend('right', inset = -0.2, legend = c(siteabbr[sites],paste0('20',acf.years[years])), pch = c(rep(19, times = length(sites)),pt.types), col = c(linecols[sites], rep('black', times = length(years))), xpd = T)
+```
 
 ### Describe responses by annual metrics
+--- Scatterplots of relationships stratified by site and year
 Create dataframes of the independent and dependent variables to look at
 ```{r}
 sites <- 1:12 #select all sites
+#sites <- c(1:6,8:12) #exclude Sawmill
 #sites <- which(!is.na(site.areas)) #select surface catchments
-sites <- c(1:5) #select custom sites
+#sites <- c(1:5,12) #sites w/ UEB modeled data
 years <- c(1:4) #numbers 1-7 for '15-'21
 funct <- 'QAV'
-y.title <- 'Average annual discharge'
-y.units <- '(m3/s)'
+y.title <- 'Annual average discharge'
+y.units <- '(cms)'
+
 x.var <- 'TMP'
-x.title <- 'Total Fall Rain'
-plot.title <- paste('Average Discharge by','Fall Precip')
+x.title <- 'Fall Precip'
+x.units <- '(mm)'
+
+plot.title.1 <- 'Annual flow by'
+plot.title.2 <- 'Fall Precip'
 
 sel.sites <-   sitecodes[sites]
 
@@ -152,14 +181,31 @@ x.df <- comp.df[sel.sites,x.cols]
 x.df
 y.df
 sum(is.na(x.df)-is.na(y.df))==0 #checks that both dataframes have NAs in the same places
-
+check <- 1 #sets up the safety to prevent double-normalization
+y.normed <- ''
+x.normed <- ''
 ```
 
-Add code chunk to normalize by area
+Normalize X values by area
 ```{r}
-
+runblock <- c(1:check)
+for (myrow in 1:nrow(x.df))
+x.df[myrow,] <- x.df[myrow,]/site.areas[sites[myrow]]*3.6
+check <- NULL
+x.df
+x.units <- 'mm/hr'
+x.normed <- 'Normalized'
 ```
-
+Normalize Y values by area
+```{r}
+runblock <- c(1:check)
+for (myrow in 1:nrow(y.df))
+y.df[myrow,] <- y.df[myrow,]/site.areas[sites[myrow]]*3.6
+check <- NULL
+y.df
+y.units <- 'mm/hr'
+y.normed <- 'Normalized'
+```
 
 Generate plot
 ```{r}
@@ -172,7 +218,81 @@ pt.types <- plot.points[years]
 
 par(mar = c(4,4,4,6))
 
-plot(site.out~site.in, type = 'n', xlab = x.title, ylab = y.title, main = plot.title, 
+plot(site.out~site.in, type = 'n', 
+     xlab = paste(x.title,x.units), ylab = paste(y.title,y.units), 
+     main = paste(y.normed,plot.title.1,x.normed,plot.title.2), 
+     ylim = range(y.df, na.rm = T), xlim = range(x.df, na.rm =T ))
+
+for (ii in sites) {
+site <- sitecodes[ii]
+site.in <- as.numeric(x.df[site,])
+site.out <- as.numeric(y.df[site,])  
+  
+points(site.out~site.in, col = linecols[ii], pch = plot.points[1:length(years)])
+}
+
+legend('right', inset = -0.2, legend = c(siteabbr[sites],paste0('20',acf.years[years])), pch = c(rep(19, times = length(sites)),pt.types), col = c(linecols[sites], rep('black', times = length(years))), xpd = T)
+```
+
+
+--- Evaluate and plot linear models for each
+Franklin Basin LM
+```{r}
+fb.lm <- lm(as.numeric(y.df[1,])~as.numeric(x.df[1,]))
+summary(fb.lm)
+```
+Tony Grove
+```{r}
+tg.lm <- lm(as.numeric(y.df[2,])~as.numeric(x.df[2,]))
+summary(tg.lm)
+```
+
+```{r}
+bc.lm <- lm(as.numeric(y.df[3,])~as.numeric(x.df[3,]))
+summary(bc.lm)
+```
+
+```{r}
+tf.lm <- lm(as.numeric(y.df[4,])~as.numeric(x.df[4,]))
+summary(tf.lm)
+```
+
+```{r}
+rh.lm <- lm(as.numeric(y.df[5,])~as.numeric(x.df[5,]))
+summary(rh.lm)
+```
+
+```{r}
+fd.row <- which(row.names(x.df)=='LR_FD')
+fd.lm <- lm(as.numeric(y.df[fd.row,])~as.numeric(x.df[fd.row,]))
+summary(fd.lm)
+```
+
+```{r}
+all.lm <- lm(stack(y.df)$values~stack(x.df)$values)
+summary(all.lm)
+```
+
+plot points of only one site
+```{r}
+plot(as.numeric(y.df[4,])~as.numeric(x.df[4,]))
+abline(tf.lm)
+```
+
+generate plot of all points with linear models for each site
+```{r}
+ii <- 1
+site <- sitecodes[ii]
+site.in <- as.numeric(x.df[site,])
+site.out <- as.numeric(y.df[site,])
+pt.types <- plot.points[years]
+
+
+par(mar = c(4,4,4,6))
+
+plot(site.out~site.in, type = 'n', 
+     xlab = paste(x.title,x.units), ylab = paste(y.title,y.units), 
+     main = paste(y.normed,plot.title.1,x.normed,plot.title.2), 
      ylim = range(y.df, na.rm = T), xlim = range(x.df, na.rm =T ))
 
 for (ii in sites) {
@@ -182,8 +302,40 @@ site.out <- as.numeric(y.df[site,])
   
 points(site.out~site.in, col = linecols[ii], pch = plot.points[1:4])
 }
-
+abline(fb.lm, col = linecols[1])
+abline(tg.lm, col = linecols[2])
+abline(bc.lm, col = linecols[3])
+abline(tf.lm, col = linecols[4])
+abline(rh.lm, col = linecols[5])
+abline(fd.lm, col = linecols[12])
 
 legend('right', inset = -0.2, legend = c(siteabbr[sites],paste0('20',acf.years[years])), pch = c(rep(19, times = length(sites)),pt.types), col = c(linecols[sites], rep('black', times = length(years))), xpd = T)
 ```
 
+
+---
+```{r}
+ii <- 1
+site <- sitecodes[ii]
+site.in <- as.numeric(x.df[site,])
+site.out <- as.numeric(y.df[site,])
+pt.types <- plot.points[years]
+
+
+par(mar = c(4,4,4,6))
+
+plot(site.out~site.in, type = 'n', 
+     xlab = paste(x.title,x.units), ylab = paste(y.title,y.units), 
+     main = paste(y.normed,plot.title.1,x.normed,plot.title.2), 
+     ylim = range(y.df, na.rm = T), xlim = range(x.df, na.rm =T ))
+
+for (ii in sites) {
+site <- sitecodes[ii]
+site.in <- as.numeric(x.df[site,])
+site.out <- as.numeric(y.df[site,])  
+  
+points(site.out~site.in, col = linecols[ii], pch = plot.points[1:length(years)])
+}
+
+abline(fb.lm)
+legend('right', inset = -0.2, legend = c(siteabbr[sites],paste0('20',acf.years[years])), pch = c(rep(19, times = length(sites)),pt.types), col = c(linecols[sites], rep('black', times = length(years))), xpd = T)

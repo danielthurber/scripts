@@ -8,10 +8,18 @@ output: pdf_document
 library(zoo, warn.conflicts = F)
 library(raster, warn.conflicts = F)
 ```
+```{r}
+i <- 1
+site <- sitecodes[i]               #enter site code for file upload and export
+sitename <- sitenames[i]        #enter site name for plotting
+siteabv <- siteabbr[i]
+paste('Site:', site, '-', sitename,'(',siteabv,')')
+   #the line color vector is used by other plotting scripts as well.  Attempt to keep it consistent
+```
 
 
 ```{r}
-inraster <- raster('C:/Users/Daniel/Documents/Research/hypsometric_curves/GC_DEM.tif')
+inraster <- raster(paste0('C:/Users/Daniel/Documents/Research/hypsometric_curves/',siteabv,'_DEM.tif'))
 elevFreq <- freq(inraster)
 ```
 
@@ -43,6 +51,11 @@ for (i in seq(1,nrow(truelev))){
 truelev$CDVal <- truelev$sum/sum(truelev$count)
 tail(truelev,2) #last two lines should approach and equal 1 for CDVal
 ```
+
+```{r}
+
+```
+
 
 Determine and look at the total range of elevations
 ```{r}
